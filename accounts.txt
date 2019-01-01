@@ -1,0 +1,3 @@
+username:password: - master
+:username:password - disabled
+username:password - normal
