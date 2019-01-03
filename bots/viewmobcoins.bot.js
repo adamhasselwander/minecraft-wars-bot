@@ -17,13 +17,12 @@ async function viewMobCoins(bot) {
 		}, 60 * 1000)
 
       bot.chatAddPattern(/Your Mob Coins:(.*)/, "mobcoinsCount")
-      bot.once("mobcoinsCount", async () => {
+      bot.once("mobcoinsCount", async (msg) => {
 	
          let coins = parseMobCoinAmmount(msg)
          bot.mobCoin.count = coins
          
          clearTimeout(watchDogId)
-         bot.removeListener('message', onMessage)
          resolve()
 
       })
@@ -37,7 +36,7 @@ async function viewMobCoins(bot) {
 function parseMobCoinAmmount(msg) {
 	let coins = msg.trim().split(' ')[0];
 	coins = parseInt(coins.replace(',', '').replace('.', ''));
-	console.log("Coins: ", coins)
+	console.log("Coins: " + coins)
 	return coins
 }
 

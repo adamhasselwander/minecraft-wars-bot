@@ -11,6 +11,14 @@ module.exports.getSign = getSign
 async function getSign(bot) {
    console.log("Signs") 
    await goHomeOrCreatIs(bot);
+
+   await sleep(500)
+
+   const sign = bot.findBlock({
+		matching: (it) => it && it.name.indexOf('sign') != -1,
+	})
+
+	if (sign) return 
   	
 	return new Promise((resolve, reject) => {
 		

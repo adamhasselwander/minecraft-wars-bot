@@ -59,7 +59,7 @@ async function clickItemDesc(bot, window, desc, clickBtn = 0) {
 		
 		setTimeout(async () => {
 			reject(new Error("Timeout: Clicking item with desc"))
-		}, 20 * 1000)
+		}, 10 * 1000)
 	   
       bot.clickWindow(targetBlock.slot, 0, clickBtn, (err) => {
          if (err) reject(new Error(err))

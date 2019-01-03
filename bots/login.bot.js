@@ -5,6 +5,32 @@ const printServerBlocks = require('./settings.js').printServerBlocks
 
 module.exports.spawnAndLogin = spawnAndLogin
 module.exports.login = login
+module.exports.waitForErrors = waitForErrors
+
+async function waitForErrors(bot, maxSecondsToWait = 10) {
+ 	
+   return new Promise((resolve, reject) => {
+		
+		const watchDogId = setTimeout(() => {
+	      resolve()
+      }, maxSecondsToWait * 1000)
+	    
+      bot.on('login', onLogin)
+      function onLogin() {
+         bot.removeListener('login', onLogin)
+         resolve()
+      }
+      
+      bot.on('error', onError)
+
+      function onError(err) {
+         console.log('There was an unkown error during login')
+         reject(new Error(err))
+      }
+
+   })
+
+}
 
 async function spawnAndLogin(bot) {
 	return new Promise((resolve, reject) => {

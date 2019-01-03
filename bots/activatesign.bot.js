@@ -12,6 +12,7 @@ async function activateSign(bot) {
 	
 	const sign = bot.findBlock({
 		matching: (it) => it && it.name.indexOf('sign') != -1,
+      maxDistance: 3,
 	})
 
 	if (!sign) {
@@ -25,13 +26,11 @@ async function activateSign(bot) {
 		
 		const watchDogId = setTimeout(() => {
 			reject(new Error("Timeout: Activating signs"))
-		}, 60 * 1000)
+		}, 10 * 1000)
 		
       bot.chatAddPattern(/You must wait (.*)/, "mobcoinTime")
 		bot.chatAddPattern(/ve received(.*)Mob Coins/, "mobcoinCount")
-      bot.once("mobcoinTime", onMobcoinTime)
-      bot.once("mobcoinCount", onMobcoinCount)
-   
+      
       async function onMobcoinTime(msg) {
          console.log("Detected sign activation")
          clearInterval(intervalId)
@@ -55,7 +54,12 @@ async function activateSign(bot) {
          console.log("Found mobcoins to collect")
          bot.mobCoin.collected = parseMobCoinCount(msg)
       }
-	   
+
+      setTimeout(() => {
+	      bot.once("mobcoinTime", onMobcoinTime)
+         bot.once("mobcoinCount", onMobcoinCount)
+      }, 500)
+    
       intervalId = setInterval(() => {
 	      bot.activateBlock(sign)
       }, 200)

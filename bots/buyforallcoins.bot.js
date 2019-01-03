@@ -12,13 +12,10 @@ const Vec3 = require('vec3').Vec3
 const helper = require('./helper.js')
 const loginBot = require('./login.bot.js')
 const activatesignBot = require('./activatesign.bot.js');
-const dropmobcoinsBot = require('./dropmobcoins.bot.js');
 const movearoundBot = require('./movearound.bot.js');
 
 (async function() {
 	let item = await getItemToBuy()
-	console.log(item)
-	
 	await buyItemOnAllAccounts(item)
 })();
 
@@ -40,6 +37,10 @@ async function buyItemOnAllAccounts(item) {
 		  verbose: true
 		})
 		
+      console.log()
+      console.log('--- ' + username + ' ---')
+      console.log()
+
       try {
          await loginBot.spawnAndLogin(bot)
          await movearoundBot.moveAroundUntilCommandAccess(bot)
@@ -48,9 +49,14 @@ async function buyItemOnAllAccounts(item) {
       } catch (err) {
          console.log(err)
       } finally {
+         console.log('Disconnecting player ' + bot.username)
          await helper.disconnectSafely(bot)
       }
+      console.log()
+      console.log('--- /' + username + ' ---')
+      console.log()
 
+      await sleep(2000)
 	}
 }
 
@@ -75,40 +81,39 @@ async function getItemToBuy() {
 	  verbose: true
 	})
 	
-	await helper.spawnAndLogin(masterBot)
+	await loginBot.spawnAndLogin(masterBot)
+	await movearoundBot.moveAroundUntilCommandAccess(masterBot)
 	
 	return new Promise((resolve, reject) => {
 					
 		console.log('Executing /mobcoins')
 		masterBot.chat('/mobcoins')
 		
-		masterBot.on('windowOpen', onWindowOpen)
+		masterBot.once('windowOpen', onWindowOpen)
 		
 		async function onWindowOpen(window) {
-			masterBot.removeListener('windowOpen', onWindowOpen)
 			
 			console.log('Mobcoin shop opened with title: ' + window.title)
 			
 			await sleep(2000)
 			
 			let items = window.slots.filter((item, index) => {
+            if (!item) return false
+
             item.slot = index
 
-          	if (!item || item.name == 'stained_glass_pane' || item.slot >= 36)
+          	if (item.name == 'stained_glass_pane' || item.slot >= 36)
                return false
 
-            let desc = win.slots
-               .filter(s => s && s.type != -1 && s.type != 160)
-               .map(s => s.nbt)[0].value.display.value.Name.value
+            item.desc = item.nbt.value.display.value.Name.value
                .replace(/§[0-9a-flnmokr]/g, '')
 
-				item.desc = desc
 				console.log(item.slot + ' ' + item.name +' ' + item.desc)
 
             return true
          })
 			
-			console.log("Please enter a number"))
+			console.log("Please enter a number")
 			
 			masterBot.closeWindow(window)
 			
@@ -118,10 +123,11 @@ async function getItemToBuy() {
 			async function onLine(line) {
 				try {
 					let choice = parseInt(line);
-					console.log('Selected item: ' + items[choice].displayName)
+					let item = items.filter(it => it.slot == choice)[0]
+
+					console.log('Selected item: ' + item.desc)
 					rl.off('line', onLine)						
-					
-					resolve(items[choice])
+					resolve(item)
 				} catch {
 					console.log("Could not parse the choice " + line)
 					console.log("Please enter a new number")
@@ -134,44 +140,87 @@ async function getItemToBuy() {
 }
 
 async function buyItem(bot, item) {
-		
+   
+   console.log('Buying item ' + item.desc)
+
+	bot.chatAddPattern(/You have purchased/, "mobcoinShopped")
+   bot.chatAddPattern(/Mob Coins to purchase this./, "mobcoinNotEnough")	
+
 	return new Promise((resolve, reject) => {
+   	const watchDogId = setTimeout(() => {
+			reject(new Error("Timeout: Buy item"))
+		}, 90 * 10 * 1000)
       
       bot.chat('/mobcoins')						
-      bot.on('windowOpen', onWindowOpen)
+      bot.once('windowOpen', onWindowOpen)
          
       async function onWindowOpen(window) {
-         bot.off('windowOpen', onWindowOpen)
+         let waitForBuy = true 
+         await sleep(500)
          
-         await sleep(2000)
-
-         bot.chatAddPattern(/You have purchased/, "mobcoinShopped")
-         bot.chatAddPattern(/Mob Coins to purchase this./, "mobcoinNotEnough")
          bot.once("mobcoinShopped", onMobcoinShopped)
          bot.once("mobcoinNotEnough", onMobcoinNotEnough) 
 
-         bot.clickWindow(item.slot, 0, 0, (err) => {
-            if (err) console.error(err);
-         })
-         
-         console.log("Trying to buy item: " + item.desc + ' in window ' +
-            window.title);
-
          async function onMobcoinShopped() {
             bot.off("mobcoinNotEnough", onMobcoinNotEnough)
+            waitForBuy = false
 
             console.log('Souccessfully bought your item, buying another one!')
-            await buyItems(bot, item)
+            await buyItem(bot, item)
+            resolve()
          }
 
          async function onMobcoinNotEnough() {
             bot.off("mobcoinShopped", onMobcoinShopped)
+            waitForBuy = false
 
             console.log('Not enough mob coins to buy more items!')
             resolve()
-         }
+         } 
 
+         setTimeout(async () => {
+            let tries = 4
+            while (waitForBuy && --tries > 0) {
+               try {
+                  await waitForBuyClick(bot, item)
+                  return
+               } catch(err) {
+                  await sleep(500)
+               }
+            }
+
+            bot.off("mobcoinShopped", onMobcoinShopped)
+            bot.off("mobcoinNotEnough", onMobcoinNotEnough)
+
+            if (!waitForBuy) return 
+
+            console.log('Someting went wrong, aborting')
+            reject()
+
+         })
       }
    })
 }
 
+async function waitForBuyClick(bot, item) {
+
+	return new Promise((resolve, reject) => {
+   	const watchDogId = setTimeout(() => {
+         bot.off("mobcoinShopped", resolve)
+         bot.off("mobcoinNotEnough", resolve) 
+
+			reject(new Error("Timeout: Buy click"))
+		}, 1200)
+ 
+      bot.once("mobcoinShopped", resolve)
+      bot.once("mobcoinNotEnough", resolve) 
+
+      bot.clickWindow(item.slot, 0, 0, (err) => {
+         if (err) console.error(err);
+      })
+      
+      console.log("Trying to buy item: " + item.desc);
+
+   })
+
+}

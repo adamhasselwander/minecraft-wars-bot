@@ -67,7 +67,7 @@ async function collectMobCoinsAllAccounts() {
       
       try {
          
-         await waitForErrors(bot)
+         await loginBot.waitForErrors(bot)
          await loginBot.spawnAndLogin(bot)
          await activatesignBot.activateSign(bot)
 
@@ -98,30 +98,7 @@ async function collectMobCoinsAllAccounts() {
 	}
 }
 
-async function waitForErrors(bot, maxSecondsToWait = 10) {
- 	
-   return new Promise((resolve, reject) => {
-		
-		const watchDogId = setTimeout(() => {
-	      resolve()
-      }, maxSecondsToWait * 1000)
-	    
-      bot.on('login', onLogin)
-      function onLogin() {
-         bot.removeListener('login', onLogin)
-         resolve()
-      }
-      
-      bot.on('error', onError)
 
-      function onError(err) {
-         console.log('There was an unkown error during login')
-         reject(new Error(err))
-      }
-
-   })
-
-}
 
 function updateUsername(email, username) {
    if (!email || !username) return
