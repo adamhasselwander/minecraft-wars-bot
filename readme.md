@@ -89,7 +89,7 @@ The buy for all coins bot is used to buy stuff in the `/mobcoins` shop for all m
 
 The dropper bot is used for dropping items. It can be called with an argument either `inv` or `coins`.
 
-Note: The master account will respond to `./is coop <name>` (could be whispered) with executing `/is coop <name>` and every `/tpa <master>` with `/tpaccept`
+Note: The master account will respond to `/msg <master> ./is coop <name>` with executing `/is coop <name>` and every `/tpa <master>` with `/tpaccept`, `/msg <master> ./drop inv <name>`.
 
 `inv`:
 
