@@ -70,6 +70,7 @@ async function collectMobCoinsAllAccounts() {
          await loginBot.waitForErrors(bot)
          await loginBot.spawnAndLogin(bot)
          await activatesignBot.activateSign(bot)
+         resetFails(username)
 
       } catch (error) {
          
@@ -79,6 +80,7 @@ async function collectMobCoinsAllAccounts() {
             error.message + '\n\n' + error.stack + '\n\n');
 
          console.log('Error: ', error.message)
+         increaseFails(username)
          
       } finally {
          
@@ -118,7 +120,32 @@ function updateTimeToRun(username, time) {
    const times = helper.readAccountTimes() || {}
 	
    times[username] = times[username] || {};
-   times[username].timetorun = time + Math.floor(Math.random() * 5 * 60 * 1000)
+   times[username].timetorun = time + 
+      Math.floor(Math.random() * 5 * 60 * 1000) * 
+      Math.floor(Math.pow(2, times[username].failsInARow || 0) * Math.random())
+   
+   helper.writeAccountTimes(times);
+
+}
+
+function resetFails(username) {
+	
+   const times = helper.readAccountTimes() || {}
+	
+   times[username] = times[username] || {}
+   times[username].failsInARow = 0
+   
+   helper.writeAccountTimes(times);
+
+}
+
+function increaseFails(username) {
+	
+   const times = helper.readAccountTimes() || {}
+	
+   times[username] = times[username] || {}
+   times[username].failsInARow = times[username].failsInARow || 0
+   times[username].failsInARow++
    
    helper.writeAccountTimes(times);
 
