@@ -1,16 +1,81 @@
+const mineflayer = require('mineflayer')
+
+const helper = require('./helper.js')
 const movearoundBot = require('./movearound.bot.js')
 const activatesignBot = require('./activatesign.bot.js');
-const mineflayer = require('mineflayer')
 const vec3 = require('vec3')
 const someoneWithASignShop = require('./settings.js').someoneWithASignShop
 
 module.exports.getSign = getSign
 
 async function getSign(bot) {
-	// We have no sign in our world, therefore we need to get one
+   console.log("Signs") 
+   await goHomeOrCreatIs(bot);
+  	
+	return new Promise((resolve, reject) => {
+		
+		const watchDogId = setTimeout(() => {
+			reject(new Error("Timeout: shopping"))
+		}, 60 * 1000)
+    
+      bot.once('windowOpen', async (window) => {
 
-	await movearoundBot.moveAroundUntilCommandAccess(bot);
-	await sleep(500)
+         bot.once('windowOpen', async (window) => {
+
+            try {
+               console.log("Another window!!")
+
+               await helper.clickItemDesc(bot, window, '+1')
+               await sleep(400)
+               await helper.clickItemDesc(bot, window, 'CONFIRM')
+               
+               bot.chatAddPattern(/You successfully bought/, "shopped")
+               bot.once("shopped", async () => {
+
+                  try {
+                     bot.closeWindow(window);
+
+                     await sleep(500)
+
+                     await helper.craftItem(bot, 'planks', 2)
+                     await helper.craftItem(bot, 'stick', 1)
+                     await helper.craftItem(bot, 'sign', 1)
+                     
+                     await placeSign(bot)
+                     resolve()
+         
+                  } catch (err) {
+                     reject(new Error(err))
+                  }
+
+               })
+      
+            } catch (err) {
+               reject(new Error(err))
+            }
+
+         })
+         
+         try {
+
+            console.log("Shop open, clicking stuff")
+            await sleep(500)
+            await helper.clickItemDesc(bot, window, 'Oak wood')
+            
+         } catch (err) {
+            reject(new Error(err))
+         }
+
+      })
+
+      bot.chat('/shop blocks')
+
+   })
+
+}
+
+async function goHomeOrCreatIs(bot) {
+   await movearoundBot.moveAroundUntilCommandAccess(bot);
 	
 	return new Promise((resolve, reject) => {
 		console.log('Trying to teleport home')
@@ -19,233 +84,89 @@ async function getSign(bot) {
 			reject(new Error("Timeout: getting the sign"))
 		}, 60 * 1000)
 			
+		bot.chatAddPattern(/Teleporting you to your island/, "home")
+		bot.chatAddPattern(/You do not have an island/, "missingHome")
+      bot.once("home", onHome)
+      bot.once("missingHome", onMissingHome)
+
 		bot.chat('/is home')
-		bot.on('message', onMessage)
-		
-		async function onMessage(jsonMessage) {
-			let msg = jsonMessage.extra ? jsonMessage.extra.map(cm => cm.text).join('') : ''
-			
-			if (msg.indexOf('Teleporting you to your island.') != -1) {
-				bot.removeListener('message', onMessage)
-				
-				// We have an island
-				await sleep(2000)
-				
-				const sign = bot.findBlock({
-					matching: isMatchingType,
-				})
-				
-				if (sign) {
-					await activatesignBot.activateSign(bot)
+      
+      async function onHome() {
+         console.log("Telported home")
+         bot.off("missingHome", onMissingHome)
+         resolve()
+      }
 
-					resolve()
-					return
-				}
-				
-				await getAndPlaceSign(bot)
-				
-				resolve()
-				
-				// run the bot from the beginning to see if we have a sign over there
-				// That may be dangerous
-				
-				
-			} else if (msg.indexOf('You do not have an island!') != -1) {
-				bot.removeListener('message', onMessage)
+      async function onMissingHome() {
+         console.log("Missing a home to teleport to")
+         bot.off("home", onHome)
+         
+         bot.chat('/is')
+         bot.once('windowOpen', async (window) => {
 
-				
-				// We have no island
-				bot.chat('/is');
-				bot.on('windowOpen', onWindowOpen)
-				
-				async function onWindowOpen(window) {
-					bot.removeListener('windowOpen', onWindowOpen)
-					
-					await sleep(1000)
-					
-					let wheat = window.slots.filter(item => item && item.name.indexOf('wheat') != -1)[0]
-					// Lets take the wheat!
-					
-					const itemType = wheat.type
-					const metadata = wheat.metadata
-					
-					const sourceStart = 0
-					const sourceEnd = window.inventorySlotStart
-					const destStart = window.inventorySlotStart
-					const destEnd = window.inventorySlotStart + 8
-					
-					const options = {
-						window,
-						itemType,
-						metadata,
-						count: 1,
-						sourceStart, sourceEnd, 
-						destStart, destEnd
-					}
-					
-					console.log("Trying to create an island");
+            console.log("is window opened")
+            await sleep(600)
+            
+            bot.once('forcedMove', () => {
+               console.log("Teleported home!")
+               resolve()
+            })
 
-					bot.transfer(options, async (err) => {
-						if (err) console.error(err)
-						else console.log("Creating island!")
-						
-						if (bot.currentWindow) bot.closeWindow(bot.currentWindow)
-					})
-				
-					bot.on('forcedMove', onForcedMove3)
-					
-					async function onForcedMove3() {
-						bot.removeListener('forcedMove', onForcedMove3)
-						
-						await getAndPlaceSign(bot)
-						resolve()
-					}
-			
-				}
-				
-			}
-			
-		}
-	})
+            try {
+               await helper.clickItemDesc(bot, window, "Farmland")
+            } catch (err) {
+               reject(new Error(err))
+            }
+
+         })
+      }
+   })
 }
-
-
-async function getAndPlaceSign(bot) {
-	
-	// Check if  there is a sign in the inventory before getting one
-	let sign = bot.inventory.slots.filter(it => it && it.name == 'sign');
-	
-	if (sign.length > 0) {
-		console.log('Found a sign, trying to place it!')
-		await sleep(500)
-		bot.setQuickBarSlot(sign[0].slot - 36)
-		await sleep(500)
-		
-		await placeSign(bot)
-		return
-	}
-	
-	return new Promise((resolve, reject) => {
-		console.log('Found no sign, will get one form ' + someoneWithASignShop)
-		
-		const watchDogId = setTimeout(async () => {
-			reject(new Error("Timeout: Trying to tp to get a sign"))
-		}, 60 * 1000)
-				
-		bot.chat('/is warp ' + someoneWithASignShop)
-		bot.on('forcedMove', onForcedMove)
-		
-		async function onForcedMove() {
-			bot.removeListener('forcedMove', onForcedMove)
-			
-			console.log('at ' + someoneWithASignShop)
-			await sleep(2000)
-			
-			const sign = bot.findBlock({
-				matching: isMatchingWallSign,
-				maxDistance: 4
-			})
-			
-			if (!sign) {
-				throw 'Where the fuck is the sell sign?'
-			}
-			
-			console.log("Buying a sign from a sign", sign)
-			await sleep(500)
-			
-			bot.on('windowOpen', onWindowOpen2)
-			
-			bot.openBlock(sign, mineflayer.Chest)
-			await sleep(1000)
-			
-			async function onWindowOpen2(window) {
-				bot.removeListener('windowOpen', onWindowOpen2)
-				
-				console.log('Chest trade window opened')
-				
-				await sleep(2000)
-				
-				let acceptTrade = window.slots.filter(item => item && item.name == 'stained_glass' && item.metadata == 5)			
-				acceptTrade = acceptTrade[0]
-				
-				const itemType = acceptTrade.type
-				const metadata = acceptTrade.metadata
-				
-				const sourceStart = 0
-				const sourceEnd = window.inventorySlotStart
-				const destStart = window.inventorySlotStart
-				const destEnd = window.inventorySlotStart + 8
-				
-				const options = {
-					window,
-					itemType,
-					metadata,
-					count: 1,
-					sourceStart, sourceEnd, 
-					destStart, destEnd
-				}
-				
-				console.log('Trying to accept sign trade');
-
-				bot.transfer(options, async (err) => {
-					if (err) console.error(err)
-					else console.log("Bought a sign!")
-				
-					if (bot.currentWindow) bot.closeWindow(bot.currentWindow)
-
-					bot.chat('/is go')
-			
-					bot.on('forcedMove', onForcedMove2)
-					
-					async function onForcedMove2() {
-						bot.removeListener('forcedMove', onForcedMove2)
-						console.log('We are back home')
-						await placeSign(bot)
-						
-						resolve()
-					}
-					
-				})
-			}
-			
-		}
-	})	
-	
-}
-
 
 async function placeSign(bot) {
-	// We have a sign in inventory and are on our is.
-	// The sign is in our hand
-	await sleep(1000)
-	bot.placeBlock(bot.blockAt(bot.entity.position.offset(0, -1, 0)), vec3(0, 1, 0), () => {
+	
+   // We have a sign in inventory and are on our is.
 
-		console.log('Block placed')
-	})
+   let item = bot.inventory.slots.filter((it, index) => {
+      if (!it) return false
+      it.slot = index 
+      return it.name == 'sign'
+   })[0]
+
+   for (let i = 1; i < 10; i++) {
+      if (item) break
+
+      await sleep(200)
+      item = bot.inventory.slots.filter((it, index) => {
+         if (!it) return false
+         it.slot = index 
+         return it.name == 'sign'
+      })[0]
+      
+   }
+
+   if (!item) {
+      throw new Error("Could not find the sign")
+   }
+
+   bot.setQuickBarSlot(item.slot - 36)
+
+	// The sign is in our hand
+	
+   await sleep(1000)
+	bot.placeBlock(bot.blockAt(bot.entity.position.offset(0, -1, 0)), 
+      vec3(0, 1, 0), () => {
+		      console.log('Block placed')
+	      })
 	
 	await sleep(2000)
 	console.log('Placed a sign')
 		
 	const signBlock = bot.findBlock({
-		matching: isMatchingType
+		matching: (it) => it && it.name.indexOf("sign") != -1 
 	})
 	
 	bot.updateSign(signBlock, '[mobcoin]\n\n\n')
 	
-	await sleep(1000)
-	
 }
 
-function isMatchingWallSign(block) {
-	return block && block.name.indexOf("wall") != -1 && block.name.indexOf("sign") != -1;
-}
-function isMatchingType(block) {
-	return block && block.name.indexOf("sign") != -1;
-}
-
-
-function sleep(ms){
-    return new Promise(resolve=>{
-        setTimeout(resolve,ms)
-    })
-}

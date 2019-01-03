@@ -20,7 +20,6 @@ const movearoundBot = require('./movearound.bot.js');
 	console.log(item)
 	
 	await buyItemOnAllAccounts(item)
-	
 })();
 
 async function buyItemOnAllAccounts(item) {
@@ -41,12 +40,18 @@ async function buyItemOnAllAccounts(item) {
 		  verbose: true
 		})
 		
-		await loginBot.spawnAndLogin(bot)
-		await movearoundBot.moveAroundUntilCommandAccess(bot)
-		await sleep(1000)
-		await buyItem(bot, item)
-		
-	}	
+      try {
+         await loginBot.spawnAndLogin(bot)
+         await movearoundBot.moveAroundUntilCommandAccess(bot)
+         await sleep(1000)
+         await buyItem(bot, item)
+      } catch (err) {
+         console.log(err)
+      } finally {
+         await helper.disconnectSafely(bot)
+      }
+
+	}
 }
 
 async function getItemToBuy() {
@@ -70,7 +75,7 @@ async function getItemToBuy() {
 	  verbose: true
 	})
 	
-	await spawnAndLogin(masterBot)
+	await helper.spawnAndLogin(masterBot)
 	
 	return new Promise((resolve, reject) => {
 					
@@ -86,33 +91,37 @@ async function getItemToBuy() {
 			
 			await sleep(2000)
 			
-			let i = 0
-			let arr = []
-			let items = window.slots
-			for (let item of items) {
-				if (!item || item.name == 'stained_glass_pane' || item.slot >= 36) continue
-				
-				arr[i] = item;
-				console.log(i + ' ' + item.name +' ' + item.displayName)
-				i++;
-			}
+			let items = window.slots.filter((item, index) => {
+            item.slot = index
+
+          	if (!item || item.name == 'stained_glass_pane' || item.slot >= 36)
+               return false
+
+            let desc = win.slots
+               .filter(s => s && s.type != -1 && s.type != 160)
+               .map(s => s.nbt)[0].value.display.value.Name.value
+               .replace(/§[0-9a-flnmokr]/g, '')
+
+				item.desc = desc
+				console.log(item.slot + ' ' + item.name +' ' + item.desc)
+
+            return true
+         })
 			
-			console.log("Please enter a number between 0 and " + (i - 1))
+			console.log("Please enter a number"))
 			
 			masterBot.closeWindow(window)
 			
-			masterBot.quit()
-			await sleep(3000)
-			masterBot.end()
+         rl.on('line', onLine)
+			await helper.disconnectSafely(masterBot)
 			
-			rl.on('line', onLine)
 			async function onLine(line) {
 				try {
 					let choice = parseInt(line);
-					console.log('Selected item: ' + arr[choice].displayName)
-					rl.removeListener('line', onLine)						
+					console.log('Selected item: ' + items[choice].displayName)
+					rl.off('line', onLine)						
 					
-					resolve(arr[choice])
+					resolve(items[choice])
 				} catch {
 					console.log("Could not parse the choice " + line)
 					console.log("Please enter a new number")
@@ -124,53 +133,45 @@ async function getItemToBuy() {
 	
 }
 
-
 async function buyItem(bot, item) {
 		
-	bot.chat('/mobcoins')						
-	bot.on('windowOpen', onWindowOpen)
-		
-	async function onWindowOpen(window) {
-		bot.removeListener('windowOpen', onWindowOpen)
-		
-		await sleep(2000)
-		
-		const itemType = item.type
-		const metadata = item.metadata
-		
-		const sourceStart = 0
-		const sourceEnd = window.inventorySlotStart
-		const destStart = window.inventorySlotStart
-		const destEnd = window.inventorySlotStart + 8
-		
-		bot.clickWindow(item.slot, 0, 0, (err) => {
-			if (err) console.error(err);
-			
-			bot.clickWindow(item.slot, 1, 0, (err) => {
-				if (err) console.error(err);
-			})
-		})
-		
-		console.log("Trying to buy item: " + item.displayName + ' in window ' + window.title);
-				
-		bot.on('message', onMessage)
-		
-		async function onMessage(jsonMessage) {
-			bot.removeListener('message', onMessage)
-			
-			let msg = jsonMessage.extra ? jsonMessage.extra.map(cm => cm.text).join('') : ''
-			
-			if (msg.indexOf("You have purchased") != -1) {
-				
-				console.log('Souccessfully bought your item, buying another one!')
-				await buyItems(bot, item)
-				
-			} else if (msg.indexOf("Mob Coins to purchase this.") != -1) {
-				
-				console.log('Not enough mob coins to buy more items!')
-				return
-			}
-		}
-	}
+	return new Promise((resolve, reject) => {
+      
+      bot.chat('/mobcoins')						
+      bot.on('windowOpen', onWindowOpen)
+         
+      async function onWindowOpen(window) {
+         bot.off('windowOpen', onWindowOpen)
+         
+         await sleep(2000)
+
+         bot.chatAddPattern(/You have purchased/, "mobcoinShopped")
+         bot.chatAddPattern(/Mob Coins to purchase this./, "mobcoinNotEnough")
+         bot.once("mobcoinShopped", onMobcoinShopped)
+         bot.once("mobcoinNotEnough", onMobcoinNotEnough) 
+
+         bot.clickWindow(item.slot, 0, 0, (err) => {
+            if (err) console.error(err);
+         })
+         
+         console.log("Trying to buy item: " + item.desc + ' in window ' +
+            window.title);
+
+         async function onMobcoinShopped() {
+            bot.off("mobcoinNotEnough", onMobcoinNotEnough)
+
+            console.log('Souccessfully bought your item, buying another one!')
+            await buyItems(bot, item)
+         }
+
+         async function onMobcoinNotEnough() {
+            bot.off("mobcoinShopped", onMobcoinShopped)
+
+            console.log('Not enough mob coins to buy more items!')
+            resolve()
+         }
+
+      }
+   })
 }
 

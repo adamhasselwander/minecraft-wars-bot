@@ -5,24 +5,29 @@ const Vec3 = require('vec3').Vec3
 const helper = require('./helper.js')
 const loginBot = require('./login.bot.js')
 const activatesignBot = require('./activatesign.bot.js');
-const dropmobcoinsBot = require('./dropmobcoins.bot.js');
+const dropBot = require('./drop.bot.js');
 const movearoundBot = require('./movearound.bot.js');
 
+const mode = process.argv[0]
+if (process.argv.length != 1 || !(mode == 'inv' || mode == 'coins') {
+   console.log('Usage : node dropper.bot.js <inv|coins>')
+   process.exit(1)
+}
+
 (async function() {
-	await dropCoinsAllAccounts()
+	await dropCoinsAccounts(mode)
 })();
 
-async function dropCoinsAllAccounts() {
-	console.log("We are going to drop all mobcoins!");
+async function dropAllAccounts(mode) {
+	console.log("We are going to drop stuff!");
 	console.log()
 	
-	let master = helper.readAccounts().filter(a => a.isMaster);
-	if (!master || master.length < 1) {
+	let master = helper.readAccounts().filter(a => a.isMaster)[0]
+	if (!master) {
 		throw new Error("There is no master defined!" + 
          " Add a semicolon (username:password:) to set the master")
 	}
 	
-	master = master[0]
 	let slaveBot = null;
 	
 	const masterBot = mineflayer.createBot({
@@ -33,36 +38,37 @@ async function dropCoinsAllAccounts() {
 	  version: '1.8',
 	  verbose: true
 	})
-	
-   masterBot.on('message', onMessage)
-   async function onMessage(jsonMessage) {
-      let msg = jsonMessage.extra ? jsonMessage.extra.map(cm => cm.text).join('') : ''
+
+   bot.chatAddPattern(/\/tpaccept/, "tpAccept")
+   bot.chatAddPattern(/.\/is coop (.*)/, "isCoop")
+
+   bot.on("tpAccept", () => {
+      masterBot.chat('/tpaccept')
+      console.log('Sending tpaccept')
+   })
+
+   bot.on("isCoop", (msg) => {
+      let username = parts.trim().split(' ')[0].trim();
       
-      if (msg.indexOf('/tpaccept') != -1 && msg.length > '/tpaccept '.length) {
-         masterBot.chat('/tpaccept');
-         console.log('Sending tpaccept');
-      }
-      
-      if (msg.indexOf('./is coop ') != -1 && msg.length > '/tpaccept '.length) {
-         let parts = msg.split('./is coop ');
-         if (parts.length < 2) return;
-         let username = parts.split(' ')[0].trim();
-         
-         masterBot.chat('/is coop ' + username);
-         console.log('Sending /is coop ' + username);
-         console.log("'" + msg + "'");
-      }
-   }
+      masterBot.chat('/is coop ' + username);
+      console.log('Sending /is coop ' + username);
+      console.log("'" + msg + "'");
+   })   
    
    await loginBot.loginAndSpawn(masterBot)
 	console.log("Master loggedin")
 
    await movearoundBot.moveAroundUntilCommandAccess(masterBot)
    await sleep(1000)
-         
-   let depositId = setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
+           
+   masterBot.chat('/is go')
+   
+   let depositId = 
+      setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
 
    async function depositMobCoins() {
+      if (mode != 'coins') return
+
       console.log('Depositing mobcoins')
       let coinsInInventory = masterBot.inventory.items()
             .filter(item => item.displayName.indexOf('unflower') != -1)
@@ -78,9 +84,7 @@ async function dropCoinsAllAccounts() {
 
       depositId = setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
    }
-   
-   masterBot.chat('/is go')
-   
+ 
    for (let acc of helper.readAccounts()) {
       if (acc.username == master.username) continue
       
@@ -99,8 +103,13 @@ async function dropCoinsAllAccounts() {
       
       try {
 
-         await dropmobcoinsBot.dropMobCoins(masterBot, slaveBot)
-         console.log("Done dropping coins for " + slaveBot.username)
+         if (mode == 'coins') {
+            await dropBot.dropMobCoins(masterBot, slaveBot)
+            console.log("Done dropping coins for " + slaveBot.username)
+         } else if (mode == 'inv') {
+            await dropBot.dropInventory(masterBot, slaveBot)
+            console.log("Done dropping inventory for " + slaveBot.username)
+         }
 
       } catch (err) {
          

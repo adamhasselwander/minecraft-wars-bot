@@ -1,11 +1,13 @@
 const fs = require('fs')
 const mineflayer = require('mineflayer')
 
+const helper = require('./helper.js')
 const loginBot = require('./login.bot.js')
 const movearoundBot = require('./movearound.bot.js')
 const username = require('./settings').spectator.username
 const password = require('./settings').spectator.password
 ;
+
 (async function() {
 	console.log("Starting spectator")
 	console.log()
@@ -25,50 +27,35 @@ const password = require('./settings').spectator.password
 	  verbose: true
 	})
 	
-	spectator.on('spawn', onSpawn)
-	
-	async function onSpawn() {
-		spectator.removeListener('spawn', onSpawn)
-		await loginBot.login(spectator)
-		
-		await sleep(1000)
-		await movearoundBot.moveAroundUntilCommandAccess(spectator)
-		await sleep(500)
-		
-		console.log("Waiting for players to join")
-		
-		setTimeout(() => {
-			spectator.on('playerJoined', onPlayerJoined)
-			spectator.on('message', onMessage)
-		}, 2 * 1000)
-	}
+   loginBot.spawnAndLogin(spectator)
+   await sleep(1000)
+   await movearoundBot.moveAroundUntilCommandAccess(spectator)
+   await sleep(500)
+   
+   console.log("Waiting for players to join")
+   spectator.on('playerJoined', onPlayerJoined)
 	
 	async function onPlayerJoined(player) {
-		if (true || usernames.filter(u => u.trim() == player.username.trim()).length > 0) {
-			spectator.chat('/mobcoins viewcoins ' + player.username)
-			setTimeout(() => {
-				spectator.chat('/mobcoins viewcoins ' + player.username)
-			}, 500 + Math.floor(Math.random() * 1000))
-		}
+      spectator.chat('/mobcoins viewcoins ' + player.username)
+      setTimeout(() => {
+         spectator.chat('/mobcoins viewcoins ' + player.username)
+      }, 500 + Math.floor(Math.random() * 1000))
 	}
 
-	async function onMessage(jsonMessage) {
-		let msg = jsonMessage.extra ? jsonMessage.extra.map(cm => cm.text).join('') : ''
-		
-		if (msg.indexOf('s Mob Coins:') != -1) {			
-			let parts = msg.split('s Mob Coins: ')
-			let username = parts[0].trim()
-			username = username.slice(0, username.length - 1);
-			let coin = parts[1].trim().replace(',', '')
-			
-			coins[username] = coins[username] || {}
-			coins[username].mobcoins = parseInt(coin)
-			coins[username].lastUpdated = (new Date()).getTime()
-			
-			writeAccountCoins(coins)
-		}
-	}
-	
+   bot.chatAddPattern(/(.*)s Mob Coins:(.*)/, "playerMobcoinCount")
+   bot.on("playerMobcoinCount", async (user, coins) => {
+      let parts = msg.('s Mob Coins: ')
+      let username = user.trim()
+      username = username.slice(0, username.length - 1);
+      let coin = coins.trim().replace(',', '')
+      
+      coins[username] = coins[username] || {}
+      coins[username].mobcoins = parseInt(coin)
+      coins[username].lastUpdated = (new Date()).getTime()
+      
+      writeAccountCoins(coins)
+   }) 
+  	
 	setInterval(() => {
 		let tot = 0
 		
@@ -76,9 +63,14 @@ const password = require('./settings').spectator.password
 		console.log()
 		
 		for (let username of usernames) {
-			let d = (!coins[username] || !coins[username].lastUpdated) ? '?' : (Math.floor(((new Date()).getTime() - coins[username].lastUpdated) / (1000 * 60)) + 'min'); 
+			let d = (!coins[username] || !coins[username].lastUpdated) ? '?' :
+            (Math.floor(((new Date()).getTime() - coins[username].lastUpdated) /
+               (1000 * 60)) + 'min') 
 			
-			console.log(username.padEnd(20) + (!coins[username] ? '?' : coins[username].mobcoins + '').padEnd(10) + d.padEnd(6))
+			console.log(username.padEnd(20) + 
+            (!coins[username] ? '?' :
+               coins[username].mobcoins + '').padEnd(10) + d.padEnd(6))
+
 			tot += (!coins[username] ? 0 : parseInt(coins[username].mobcoins))
 		}
 		
@@ -110,7 +102,10 @@ const password = require('./settings').spectator.password
 		await sleep(baseTime + Math.random() * jitter)
 				
 		if (Math.random() > 0.4) {
-			spectator.look(Math.random() * Math.PI * 2, Math.random() * Math.PI - Math.PI / 2);
+
+			spectator.look(
+            Math.random() * Math.PI * 2, Math.random() * Math.PI - Math.PI / 2);
+
 			await sleep(baseTime * 2 + Math.random() * jitter)
 		}
 		
@@ -120,29 +115,3 @@ const password = require('./settings').spectator.password
 		
 })();
 
-function readUsernames() {
-	const contents = JSON.parse(fs.readFileSync('usernames.txt', 'utf8'))
-	
-	let usernames = []
-	
-	Object.entries(contents).forEach(([email, val]) => {
-		usernames.push(val.username);
-	});
-	
-	return usernames
-}
-
-function readAccountCoins() {
-	if (!fs.existsSync('mobcoins.txt')) writeAccountTimes({});
-	return JSON.parse(fs.readFileSync('mobcoins.txt', 'utf8') || "{}")	
-}
-function writeAccountCoins(coins) {
-	return fs.writeFileSync('mobcoins.txt', JSON.stringify(coins, null, 2))
-}
-
-
-function sleep(ms){
-    return new Promise(resolve=>{
-        setTimeout(resolve,ms)
-    })
-}

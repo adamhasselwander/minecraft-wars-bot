@@ -6,7 +6,8 @@ const activatesignBot = require('./activatesign.bot.js')
 const movearoundBot = require('./movearound.bot.js')
 
 const helper = require('./helper.js')
-const readFileInterval = 60 * 1000
+const readFileInterval = 30 * 1000
+let totalMobCoinsCollected = 0
 ;
 
 (async function() {
@@ -15,25 +16,36 @@ const readFileInterval = 60 * 1000
 
    helper.readAccounts(true)
 	console.log()
-
+   printTimes();
+	
 	while(true) {
 		await collectMobCoinsAllAccounts()
 		
       printTimes();
+      console.log("Total coins collected: ", totalMobCoinsCollected)
 		await sleep(readFileInterval)
 	}
 	
 })();
 
 async function collectMobCoinsAllAccounts() {
-	
-	for (let acc of helper.readAccounts()) {
-		
+
+   const accounts = helper.readAccounts()
+      .map(acc => {
+         acc.timeLeft = getTimeToRun(acc.username)
+         return acc
+      })
+      .filter(acc => acc.timeLeft < 0)
+      .sort((a, b) => b.timeLeft - a.timeLeft)
+      .map((acc, index) => {
+         acc.index = index
+         return acc
+      })
+
+	for (let acc of accounts) {
 		const username = acc.username;
 		const password = acc.password;
 		
-		if (getTimeToRun(username) > 0) continue
-
       const bot = mineflayer.createBot({
         host: "pvpwars.net",
         port: 25565,
@@ -62,7 +74,8 @@ async function collectMobCoinsAllAccounts() {
       } catch (error) {
          
          fs.appendFileSync('errors.txt', 
-            bot.username + ' (' + username + '): ' + 
+            bot.username + ' (' + username + '):' +
+            new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' + 
             error.message + '\n\n' + error.stack + '\n\n');
 
          console.log('Error: ', error.message)
@@ -71,7 +84,8 @@ async function collectMobCoinsAllAccounts() {
          
          updateUsername(username, bot.username)
          updateTimeToRun(username, bot.mobCoin.nextSignTime)
-         
+         totalMobCoinsCollected += (bot.mobCoin.collected || 0)
+
          console.log("Disconnecting from minecraft")
          await helper.disconnectSafely(bot)
       
@@ -79,7 +93,8 @@ async function collectMobCoinsAllAccounts() {
       
       console.log('--- /' + username + ' ---')
       console.log()
-
+      console.log((acc.index + 1) + ' of ' + accounts.length)
+      await sleep(5000)
 	}
 }
 
@@ -135,13 +150,17 @@ function updateTimeToRun(username, time) {
 function printTimes() {
 	
    console.log()
-
-	for (let acc of helper.readAccounts()) {
+   let accounts = helper.readAccounts().map(acc => {
+      acc.timeLeft = getTimeToRun(acc.username)
+      return acc
+   }).sort((a, b) => b.timeLeft - a.timeLeft)
+   
+	for (let acc of accounts) {
 		const username = acc.username;
 		const password = acc.password;
 		
 		let msLeft = getTimeToRun(username)
-      console.log(username.padEnd(30), 
+      console.log(username.padEnd(45), 
          (Math.floor(msLeft / (60 * 1000)) + "min").padEnd(10));
 	}
 }
