@@ -35,7 +35,7 @@ async function collectMobCoinsAllAccounts() {
          acc.timeLeft = getTimeToRun(acc.username)
          return acc
       })
-      .filter(acc => acc.timeLeft < 0)
+      .filter(acc => acc.timeLeft <= 0)
       .sort((a, b) => b.timeLeft - a.timeLeft)
       .map((acc, index) => {
          acc.index = index
@@ -123,7 +123,7 @@ function updateTimeToRun(username, time) {
    times[username].timetorun = time + 
       Math.floor(Math.random() * 5 * 60 * 1000) * 
       Math.floor(Math.pow(2, times[username].failsInARow || 0) * Math.random())
-   
+
    helper.writeAccountTimes(times);
 
 }
@@ -140,9 +140,8 @@ function resetFails(username) {
 }
 
 function increaseFails(username) {
-	
    const times = helper.readAccountTimes() || {}
-	
+
    times[username] = times[username] || {}
    times[username].failsInARow = times[username].failsInARow || 0
    times[username].failsInARow++
