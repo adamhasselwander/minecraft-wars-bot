@@ -11,8 +11,8 @@ const password = require('./settings').spectator.password
 (async function() {
 	console.log("Starting spectator")
 	console.log()
-	const usernames = readUsernames();
-	let coins = readAccountCoins();
+	const usernames = helper.readUsernames();
+	let coins = helper.readAccountCoins();
 	
 	setTimeout(() => {
 		process.exit()
@@ -37,44 +37,78 @@ const password = require('./settings').spectator.password
 	
 	async function onPlayerJoined(player) {
       spectator.chat('/mobcoins viewcoins ' + player.username)
-      setTimeout(() => {
-         spectator.chat('/mobcoins viewcoins ' + player.username)
-      }, 500 + Math.floor(Math.random() * 1000))
 	}
 
-   bot.chatAddPattern(/(.*)s Mob Coins:(.*)/, "playerMobcoinCount")
-   bot.on("playerMobcoinCount", async (user, coins) => {
-      let parts = msg.('s Mob Coins: ')
+   spectator.once('end', () => {
+      process.exit()
+   })
+   
+   spectator.on('windowOpen', (window) => {
+      let items = window.slots.filter((item, index) => {
+         if (!item) return false
+
+         item.slot = index
+
+         if (item.name == 'stained_glass_pane' || item.slot >= 36)
+            return false
+
+         item.desc = item.nbt.value.display.value.Name.value
+            .replace(/§[0-9a-flnmokr]/g, '')
+
+         console.log(item.slot + ' ' + item.name +' ' + item.desc)
+
+         return true
+      })
+      console.log(window.title, items.map(it => it.desc || it.displayName))
+      process.exit()
+   })
+
+   spectator.chatAddPattern(/(.*)s Mob Coins:(.*)/, "playerMobcoinCount")
+   spectator.on("playerMobcoinCount", async (user, userCoins) => {
       let username = user.trim()
       username = username.slice(0, username.length - 1);
-      let coin = coins.trim().replace(',', '')
+      let coin = userCoins.trim().replace(',', '')
       
       coins[username] = coins[username] || {}
       coins[username].mobcoins = parseInt(coin)
       coins[username].lastUpdated = (new Date()).getTime()
       
-      writeAccountCoins(coins)
+      process.stdout.write('.')
+
+      helper.writeAccountCoins(coins)
    }) 
   	
 	setInterval(() => {
-		let tot = 0
-		
+		let old = 0
+
 		console.log()
 		console.log()
-		
+		let arr = []
+
 		for (let username of usernames) {
 			let d = (!coins[username] || !coins[username].lastUpdated) ? '?' :
             (Math.floor(((new Date()).getTime() - coins[username].lastUpdated) /
-               (1000 * 60)) + 'min') 
-			
-			console.log(username.padEnd(20) + 
-            (!coins[username] ? '?' :
-               coins[username].mobcoins + '').padEnd(10) + d.padEnd(6))
+               (1000 * 60))) 
 
-			tot += (!coins[username] ? 0 : parseInt(coins[username].mobcoins))
+         if (parseInt(d) > 60) {
+            old++
+            continue
+         }
+
+         d += 'min'
+         
+         arr.push({username:username.padEnd(20), mobcoins: coins[username].mobcoins, mins: d })
 		}
 		
-		console.log("Total:".padEnd(20) + (tot + '').padEnd(10))
+      arr.sort((a,b) => a.mobcoins - b.mobcoins)
+
+      const tot = arr.map(a => a.mobcoins).reduce((a, b) => a + b)
+
+      arr.push({})
+      arr.push({username: 'Average', mobcoins: Math.floor(tot / (arr.length - 1))})
+      arr.push({username: 'Total', mobcoins: tot})
+
+      console.table(arr)
 
 	}, 15 * 1000)
 		

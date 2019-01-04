@@ -7,6 +7,7 @@ const movearoundBot = require('./movearound.bot.js')
 
 const helper = require('./helper.js')
 const readFileInterval = 30 * 1000
+const startTime = (new Date()).getTime()
 let totalMobCoinsCollected = 0
 ;
 
@@ -22,10 +23,16 @@ let totalMobCoinsCollected = 0
 		await collectMobCoinsAllAccounts()
 		
       printTimes();
-      console.log("Total coins collected: ", totalMobCoinsCollected)
+
+      const uptime = (new Date()).getTime() - startTime
+      console.log("Total coins collected: " + totalMobCoinsCollected)
+      console.log("Total time spent: " + toHumanTime(uptime))
+      console.log("Avrage mobcoins per hour: " + 
+            Math.floor(totalMobCoinsCollected / (uptime / (3600 * 1000))))
+      
 		await sleep(readFileInterval)
 	}
-	
+
 })();
 
 async function collectMobCoinsAllAccounts() {
@@ -100,7 +107,29 @@ async function collectMobCoinsAllAccounts() {
 	}
 }
 
+function toHumanTime(ms) {
+   let secs = ms / 1000
+   let mins = secs / 60
+   let hours = mins / 60
+   let days = hours / 24
+   
+   secs %= 60
+   mins %= 60
+   hours %= 24
+  
+   secs = Math.floor(secs)
+   mins = Math.floor(mins)
+   hours = Math.floor(hours)
+   days = Math.floor(days)
+   
+   let res = ''
+   if (days) res += days + ' days '
+   if (days || hours) res += hours + ' hours '
+   if (days || hours || mins) res += mins + ' mins'
+   //if (secs) res += secs.toString().padStart(2, '0')
 
+   return res
+}
 
 function updateUsername(email, username) {
    if (!email || !username) return
@@ -153,19 +182,20 @@ function increaseFails(username) {
 function printTimes() {
 	
    console.log()
-   let accounts = helper.readAccounts().map(acc => {
+
+   let accounts = helper.readAccounts()
+   .map(acc => {
       acc.timeLeft = getTimeToRun(acc.username)
       return acc
-   }).sort((a, b) => b.timeLeft - a.timeLeft)
-   
-	for (let acc of accounts) {
-		const username = acc.username;
-		const password = acc.password;
-		
-		let msLeft = getTimeToRun(username)
-      console.log(username.padEnd(45), 
-         (Math.floor(msLeft / (60 * 1000)) + "min").padEnd(10));
-	}
+   })
+   .sort((a, b) => b.timeLeft - a.timeLeft)
+   .map(a => ({ 
+      email: a.username.padEnd(45), 
+      time: Math.floor(a.timeLeft / (60 * 1000)) + 'min'
+   }))
+
+   console.table(accounts)
+
 }
 
 function getTimeToRun(username) {

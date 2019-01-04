@@ -149,7 +149,7 @@ function readUsernames() {
 }
 
 function readAccountCoins() {
-	if (!fs.existsSync('mobcoins.txt')) writeAccountTimes({});
+	if (!fs.existsSync('mobcoins.txt')) writeAccountCoins({});
 	return JSON.parse(fs.readFileSync('mobcoins.txt', 'utf8') || "{}")	
 }
 
