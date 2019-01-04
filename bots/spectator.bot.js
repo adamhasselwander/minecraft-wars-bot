@@ -86,7 +86,9 @@ const password = require('./settings').spectator.password
 		let arr = []
 
 		for (let username of usernames) {
-			let d = (!coins[username] || !coins[username].lastUpdated) ? '?' :
+			if (!coins[username]) continue
+
+         let d = (coins[username].lastUpdated || 0)
             (Math.floor(((new Date()).getTime() - coins[username].lastUpdated) /
                (1000 * 60))) 
 

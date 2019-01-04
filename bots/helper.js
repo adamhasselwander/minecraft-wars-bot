@@ -137,7 +137,7 @@ async function disconnectSafely(bot) {
 }
 
 function readUsernames() {
-	const contents = JSON.parse(fs.readFileSync('usernames.txt', 'utf8'))
+	const contents = readAccountUsernames()
 	
 	let usernames = []
 	
