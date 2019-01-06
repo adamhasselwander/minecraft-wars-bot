@@ -21,12 +21,11 @@ setTimeout(() => {
 
 ;
 (async function() {
-   console.log("Starting spectator")
-   console.log()
    const usernames = helper.readUsernames();
    let coins = helper.readAccountCoins();
-   await sleep(6000) 
+
    printTable(usernames, coins)
+
    const spectator = mineflayer.createBot({
      host: "pvpwars.net",
      port: 25565,
@@ -41,6 +40,17 @@ setTimeout(() => {
    await movearoundBot.moveAroundUntilCommandAccess(spectator)
    await sleep(5000)
    
+   const items = await helper.parseMobcoinShop(spectator)
+   const tbl = {}
+   for (const item of items) {
+      tbl[item.slot] = { 
+         text: helper.color(item.desc, colors.Fg.Magenta), 
+         price: helper.color(item.price, colors.Fg.Yellow), 
+         item: item.name
+      }
+   }
+   
+   console.log(table(tbl, '#'))
    console.log("Waiting for players to join")
    spectator.on('playerJoined', onPlayerJoined)
    

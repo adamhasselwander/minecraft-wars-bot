@@ -85,55 +85,36 @@ async function getItemToBuy() {
    
    await loginBot.spawnAndLogin(masterBot)
    await movearoundBot.moveAroundUntilCommandAccess(masterBot)
+   const items = await helper.parseMobcoinShop(masterBot)
+   await helper.disconnectSafely(masterBot)
+
+   const tbl = {}
+   for (const item of items) {
+      tbl[item.slot] = { 
+         text: helper.color(item.desc, colors.Fg.Magenta), 
+         price: helper.color(item.price, colors.Fg.Yellow), 
+         item: item.name
+      }
+   }
    
+   console.log(table(tbl, '#'))
+
    return new Promise((resolve, reject) => {
-               
-      console.log('Executing /mobcoins')
-      masterBot.chat('/mobcoins')
+         
+      rl.on('line', onLine)
+      console.log("Please enter a number")
       
-      masterBot.once('windowOpen', onWindowOpen)
-      
-      async function onWindowOpen(window) {
-         
-         console.log('Mobcoin shop opened with title: ' + window.title)
-         
-         await sleep(2000)
-         
-         let items = window.slots.filter((item, index) => {
-            if (!item) return false
+      async function onLine(line) {
+         try {
+            let choice = parseInt(line);
+            let item = items.filter(it => it.slot == choice)[0]
 
-            item.slot = index
-
-            if (item.name == 'stained_glass_pane' || item.slot >= 36)
-               return false
-
-            item.desc = item.nbt.value.display.value.Name.value
-               .replace(/§[0-9a-flnmokr]/g, '')
-
-            console.log(item.slot + ' ' + item.name +' ' + item.desc)
-
-            return true
-         })
-         
-         console.log("Please enter a number")
-         
-         masterBot.closeWindow(window)
-         
-         rl.on('line', onLine)
-         await helper.disconnectSafely(masterBot)
-         
-         async function onLine(line) {
-            try {
-               let choice = parseInt(line);
-               let item = items.filter(it => it.slot == choice)[0]
-
-               console.log('Selected item: ' + item.desc)
-               rl.off('line', onLine)                 
-               resolve(item)
-            } catch {
-               console.log("Could not parse the choice " + line)
-               console.log("Please enter a new number")
-            }
+            console.log('Selected item: ' + item.desc)
+            rl.off('line', onLine)                 
+            resolve(item)
+         } catch {
+            console.log("Could not parse the choice " + line)
+            console.log("Please enter a new number")
          }
       }
       

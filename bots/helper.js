@@ -33,6 +33,8 @@ module.exports.clickItemDesc = clickItemDesc;
 
 module.exports.craftItem = craftItem;
 
+module.exports.parseMobcoinShop = parseMobcoinShop;
+
 function color(string, color) {
    return color + string + colors.Fg.White
 }
@@ -41,6 +43,69 @@ function randColor(string) {
    const colorKeys = Object.keys(colors.Fg)
    const colorKey = colorKeys[Math.floor(colorKeys.length * Math.random())]
    return colors.Fg[colorKey] + string + colors.Fg.White
+}
+
+async function parseMobcoinShop(bot) {
+
+   return new Promise((resolve, reject) => {
+      const watchDogId = setTimeout(() => {
+         bot.off('windowOpen', onWindowOpen)
+         reject(new Error("Timeout: Could not parse mobcoin shop items"))
+      }, 10 * 1000)
+
+      console.log('Executing /mobcoins')
+      bot.chat('/mobcoins')
+      
+      bot.once('windowOpen', onWindowOpen)
+      
+      async function onWindowOpen(window) {
+         
+         console.log('Mobcoin shop opened with title: ' + window.title)
+         
+         await sleep(2000)
+         
+         let items = window.slots.filter((item, index) => {
+            if (!item) return false
+
+            item.slot = index
+
+            if (item.name == 'stained_glass_pane' || item.slot >= 36)
+               return false
+
+            const nbtDisp = item.nbt.value.display 
+            if (nbtDisp.value.Name) {
+               item.desc = nbtDisp.value.Name.value
+                  .replace(/§[0-9a-flnmokr]/g, '')
+            } else {
+               item.desc = item.displayName
+            }
+
+            if (nbtDisp.value.Lore) {
+               const nbtLore = nbtDisp.value.Lore
+               if (nbtLore.value.value) {
+                  for (const lore of nbtDisp.value.Lore.value.value) {
+                     if (lore.toLowerCase().indexOf('price') != -1)
+                        try {
+                           item.price = parseInt(lore
+                              .replace(/§[0-9a-flnmokr]/g, '')
+                              .split(' ')
+                              .pop()
+                              .replace(/\D/g,''))
+                        } catch (err) {
+
+                        }
+                  }
+               }
+            }
+
+            return !!item.price
+         })
+         
+         bot.closeWindow(window)
+         resolve(items)
+      }
+
+   })
 }
 
 async function clickItemDesc(bot, window, desc, clickBtn = 0) {
