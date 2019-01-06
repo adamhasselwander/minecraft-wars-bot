@@ -1,6 +1,5 @@
 const mineflayer = require('mineflayer')
 const fs = require('fs');
-const Vec3 = require('vec3').Vec3
 
 const helper = require('./helper.js')
 const loginBot = require('./login.bot.js')
@@ -79,8 +78,10 @@ async function dropAllAccounts(mode) {
    await movearoundBot.moveAroundUntilCommandAccess(masterBot)
    await sleep(1000)
            
-   masterBot.chat('/is go')
-   
+   await movearoundBot.goHome(masterBot)
+   await sleep(1000)
+   const homePos = masterBot.entity.pos
+
    let depositId = 
       setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
 
@@ -105,6 +106,11 @@ async function dropAllAccounts(mode) {
  
    for (let acc of helper.readAccounts()) {
       if (acc.username == master.username) continue
+
+      if (masterBot.entity.pos.distanceTo(homePos) > 10) {
+         console.log('Master seems to have moved away from home, telporting back')
+         await movearoundBot.goHome(masterBot)
+      }
       
       console.log()
       console.log()
@@ -161,7 +167,7 @@ async function dropAllAccounts(mode) {
    console.log("Disconnecting master")
    
    masterBot.removeAllListeners()
-   masterBot.chat('/is go')
+   await movearoundBot.goHome(masterBot)
    await sleep(1000)
 
    await helper.disconnectSafely(masterBot)

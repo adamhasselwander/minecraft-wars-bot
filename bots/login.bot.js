@@ -86,7 +86,7 @@ async function login(bot ) {
 			windowHasOpened = true
 
 			if (win.title.indexOf('Select a Server') != -1) {
-				console.log("Window opened with title " + win.title);
+				console.log("Select server window opened");
             clearInterval(intervalId)
 
             try {

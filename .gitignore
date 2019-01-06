@@ -1,8 +1,5 @@
 node_modules/
-accounts.txt
-bots/usernames.txt
-bots/times.txt
-bots/mobcoins.txt
-bots/errors.txt
+*.txt
+bots/*.txt
 bots/settings.js
 

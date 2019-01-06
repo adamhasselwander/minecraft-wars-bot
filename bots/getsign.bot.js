@@ -10,7 +10,7 @@ module.exports.getSign = getSign
 
 async function getSign(bot) {
    console.log("Signs") 
-   await goHomeOrCreatIs(bot);
+   await movearoundBot.goHome(bot)
 
    await sleep(500)
 
@@ -33,22 +33,44 @@ async function getSign(bot) {
             try {
                console.log("Another window!!")
 
+               await sleep(300)
                await helper.clickItemDesc(bot, window, '+1')
                await sleep(400)
                await helper.clickItemDesc(bot, window, 'CONFIRM')
                
                bot.chatAddPattern(/You successfully bought/, "shopped")
                bot.once("shopped", async () => {
+                  
+                  console.log("Chopped some wood, will try to craft")
 
                   try {
                      bot.closeWindow(window);
 
-                     await sleep(500)
+                     async function waitForItem(name, amount) {
+                        for (let i = 1; i < 15; i++) {
 
+                           let c = bot.inventory.items()
+                              .filter(it => it.name == name).map(it => it.count)
+
+                           if (c.length > 0 && 
+                               c.reduce((a, b) => a + b) >= amount) {
+                              return;
+                           }
+
+                           await sleep(200)
+                        }
+                     }
+
+                     await waitForItem('log', 2)
                      await helper.craftItem(bot, 'planks', 2)
-                     await helper.craftItem(bot, 'stick', 1)
-                     await helper.craftItem(bot, 'sign', 1)
                      
+                     await waitForItem('planks', 8)
+                     await helper.craftItem(bot, 'stick', 1)
+
+                     await waitForItem('stick', 1)
+                     await helper.craftItem(bot, 'sign', 1)
+
+                     await waitForItem('sign', 1)
                      await placeSign(bot)
                      resolve()
          
@@ -82,54 +104,6 @@ async function getSign(bot) {
 
 }
 
-async function goHomeOrCreatIs(bot) {
-   await movearoundBot.moveAroundUntilCommandAccess(bot);
-	
-	return new Promise((resolve, reject) => {
-		console.log('Trying to teleport home')
-		
-		const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: getting the sign"))
-		}, 60 * 1000)
-			
-		bot.chatAddPattern(/Teleporting you to your island/, "home")
-		bot.chatAddPattern(/You do not have an island/, "missingHome")
-      bot.once("home", onHome)
-      bot.once("missingHome", onMissingHome)
-
-		bot.chat('/is home')
-      
-      async function onHome() {
-         console.log("Telported home")
-         bot.off("missingHome", onMissingHome)
-         resolve()
-      }
-
-      async function onMissingHome() {
-         console.log("Missing a home to teleport to")
-         bot.off("home", onHome)
-         
-         bot.chat('/is')
-         bot.once('windowOpen', async (window) => {
-
-            console.log("is window opened")
-            await sleep(600)
-            
-            bot.once('forcedMove', () => {
-               console.log("Teleported home!")
-               resolve()
-            })
-
-            try {
-               await helper.clickItemDesc(bot, window, "Farmland")
-            } catch (err) {
-               reject(new Error(err))
-            }
-
-         })
-      }
-   })
-}
 
 async function placeSign(bot) {
 	

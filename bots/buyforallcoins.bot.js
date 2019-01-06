@@ -42,6 +42,7 @@ async function buyItemOnAllAccounts(item) {
       console.log()
 
       try {
+         await loginBot.waitForErrors(bot)
          await loginBot.spawnAndLogin(bot)
          await movearoundBot.moveAroundUntilCommandAccess(bot)
          await sleep(1000)
@@ -52,6 +53,7 @@ async function buyItemOnAllAccounts(item) {
          console.log('Disconnecting player ' + bot.username)
          await helper.disconnectSafely(bot)
       }
+
       console.log()
       console.log('--- /' + username + ' ---')
       console.log()
@@ -141,20 +143,23 @@ async function getItemToBuy() {
 
 async function buyItem(bot, item) {
    
-   console.log('Buying item ' + item.desc)
-
 	bot.chatAddPattern(/You have purchased/, "mobcoinShopped")
    bot.chatAddPattern(/Mob Coins to purchase this./, "mobcoinNotEnough")	
+   
+   if (bot.currentWindow) bot.closeWindow(bot.currentWindow)
 
 	return new Promise((resolve, reject) => {
+      let windowHasOpenend = false
    	const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: Buy item"))
-		}, 90 * 10 * 1000)
+         if (windowHasOpenend) return
+			reject(new Error("Timeout: Could not open mobcoin window"))
+		}, 10 * 1000)
       
       bot.chat('/mobcoins')						
       bot.once('windowOpen', onWindowOpen)
          
       async function onWindowOpen(window) {
+         windowHasOpenend = true
          let waitForBuy = true 
          await sleep(500)
          
@@ -166,7 +171,16 @@ async function buyItem(bot, item) {
             waitForBuy = false
 
             console.log('Souccessfully bought your item, buying another one!')
-            await buyItem(bot, item)
+            
+            for (let i = 1; i < 7; i++) {
+               try {
+                  await buyItem(bot, item)
+                  break
+               } catch(err){
+                  if (i > 3) console.log(err.message)
+                  if (i > 5) console.log(err)
+               }
+            }
             resolve()
          }
 
@@ -179,7 +193,7 @@ async function buyItem(bot, item) {
          } 
 
          setTimeout(async () => {
-            let tries = 4
+            let tries = 2
             while (waitForBuy && --tries > 0) {
                try {
                   await waitForBuyClick(bot, item)
@@ -194,8 +208,8 @@ async function buyItem(bot, item) {
 
             if (!waitForBuy) return 
 
-            console.log('Someting went wrong, aborting')
-            reject()
+            console.log('Someting went wrong, aborting ' + window.title)
+            reject(new Error("Could not buy item"))
 
          })
       }

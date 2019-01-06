@@ -1,12 +1,23 @@
+const Vec3 = require('vec3').Vec3
 const helper = require('./helper.js')
-const movearoundBot = require('./movearound.bot.js')
 const getsignBot = require('./getsign.bot.js')
+const movearoundBot = require('./movearound.bot.js')
 
 module.exports.activateSign = activateSign
 
 async function activateSign(bot) {
 	bot.mobCoin = bot.mobCoin || {}
 	let intervalId = 0
+   const pos = bot.entity.position
+
+   const signPos = helper.getSignPosition(bot.username, pos)
+   const distSign = pos.distanceTo(signPos)
+   if (distSign > 6) {
+      console.log('We are far away from our sign, teleporting home')
+      await movearoundBot.goHome(bot)
+   } else if (distSign > 1) {
+      console.log('Distance to sign ' + Math.floor(distSign))
+   }
 
 	await sleep(500)
 	
@@ -39,9 +50,10 @@ async function activateSign(bot) {
          
          if (time) {
             bot.mobCoin.nextSignTime = time.getTime()
-            console.log('Time until next reward ' +
-               Math.floor((time.getTime() - (new Date()).getTime()) / (60 * 1000))
-            + 'min')
+
+            const timeMin = Math.floor((time.getTime() - 
+               (new Date()).getTime()) / (60 * 1000));
+            console.log('Time until next reward ' + timeMin + 'min')
          }
 
          await sleep(600) // to increase the chance to get mobcoin collected count
@@ -52,6 +64,7 @@ async function activateSign(bot) {
 
       async function onMobcoinCount(msg) {
          console.log("Found mobcoins to collect")
+         helper.updateSignPosition(sign, bot.username)
          bot.mobCoin.collected = parseMobCoinCount(msg)
       }
 

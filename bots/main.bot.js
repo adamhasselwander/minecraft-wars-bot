@@ -6,6 +6,7 @@ const activatesignBot = require('./activatesign.bot.js')
 const movearoundBot = require('./movearound.bot.js')
 
 const helper = require('./helper.js')
+const table = require('./table.js')
 const readFileInterval = 30 * 1000
 const startTime = (new Date()).getTime()
 let totalMobCoinsCollected = 0
@@ -189,12 +190,15 @@ function printTimes() {
       return acc
    })
    .sort((a, b) => b.timeLeft - a.timeLeft)
-   .map(a => ({ 
-      email: a.username.padEnd(45), 
-      time: Math.floor(a.timeLeft / (60 * 1000)) + 'min'
-   }))
+   .map(a => {
+      const t = Math.floor(a.timeLeft / (60 * 1000))
+      return { 
+         email: helper.color(a.username.padEnd(45), colors.Fg.Green), 
+         time: helper.color(t + 'min', colors.Fg.Blue)
+      }
+   })
 
-   console.table(accounts)
+   console.log(table(accounts))
 
 }
 

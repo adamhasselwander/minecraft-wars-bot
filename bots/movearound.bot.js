@@ -3,6 +3,56 @@ const heper = require('./helper.js')
 module.exports.moveAroundClickUntilWindow = moveAroundClickUntilWindow
 module.exports.moveAroundUntilCommandAccess = moveAroundUntilCommandAccess
 
+module.exports.goHome = goHome
+
+async function goHome(bot) {
+   await moveAroundUntilCommandAccess(bot);
+	
+	return new Promise((resolve, reject) => {
+		console.log('Trying to teleport home')
+		
+		const watchDogId = setTimeout(() => {
+			reject(new Error("Timeout: getting the sign"))
+		}, 60 * 1000)
+			
+		bot.chatAddPattern(/Teleporting you to your island/, "home")
+		bot.chatAddPattern(/You do not have an island/, "missingHome")
+      bot.once("home", onHome)
+      bot.once("missingHome", onMissingHome)
+
+		bot.chat('/is home')
+      
+      async function onHome() {
+         console.log("Telported home")
+         bot.off("missingHome", onMissingHome)
+         resolve()
+      }
+
+      async function onMissingHome() {
+         console.log("Missing a home to teleport to")
+         bot.off("home", onHome)
+         
+         bot.chat('/is')
+         bot.once('windowOpen', async (window) => {
+
+            console.log("is window opened")
+            await sleep(600)
+            
+            bot.once('forcedMove', () => {
+               console.log("Teleported home!")
+               resolve()
+            })
+
+            try {
+               await helper.clickItemDesc(bot, window, "Farmland")
+            } catch (err) {
+               reject(new Error(err))
+            }
+
+         })
+      }
+   })
+}
 async function moveAroundClickUntilWindow(bot) {
 	console.log("Moving around")
    let moveIntervalId = 0	
@@ -27,9 +77,6 @@ async function moveAroundClickUntilWindow(bot) {
          if (moveIntervalId) clearTimeout(moveIntervalId);
          moveIntervalId = 0;
          
-         console.log()
-         console.log('Window opened!')
-         
          resolve()
 		}
 
@@ -42,8 +89,6 @@ async function moveAroundClickUntilWindow(bot) {
 			async function moveOnce() {
 				let ctl = ctrls[Math.floor(Math.random() * ctrls.length)]
 				
-				process.stdout.write(" " + ctl)
-				
 				bot.setControlState(ctl, true)
 				await sleep(baseTime + Math.random() * jitter)
 				
@@ -54,7 +99,6 @@ async function moveAroundClickUntilWindow(bot) {
 					bot.look(Math.random() * Math.PI * 2, Math.random() * Math.PI - Math.PI / 2);
 					await sleep(baseTime * 2 + Math.random() * jitter)
                if (!moveIntervalId) return
-					process.stdout.write(" yaw")
 				}
 				
 				bot.setControlState(ctl, false)
@@ -69,6 +113,11 @@ async function moveAroundClickUntilWindow(bot) {
 }
 
 async function moveAroundUntilCommandAccess(bot) {
+   if (bot.cmdAccess) {
+      console.log('No need to move around, aldready has access')
+      return
+   }
+
 	console.log("Moving around")
 	
 	return new Promise((resolve, reject) => {
@@ -98,9 +147,8 @@ async function moveAroundUntilCommandAccess(bot) {
          if (moveIntervalId) clearTimeout(moveIntervalId);
          moveIntervalId = 0;
          
-         console.log()
          console.log('Now able to send commands')
-         
+         bot.cmdAccess = true
          resolve()
 		}
 		
@@ -108,8 +156,6 @@ async function moveAroundUntilCommandAccess(bot) {
 		
 		async function sendHelpCommand() {
 			bot.chat('/help')
-			console.log()
-			console.log('Executing /help')
 			helpCommandId = setTimeout(sendHelpCommand, 1000 + Math.random() * 3000)
 		}
 		
@@ -122,8 +168,6 @@ async function moveAroundUntilCommandAccess(bot) {
 			async function moveOnce() {
 				let ctl = ctrls[Math.floor(Math.random() * ctrls.length)]
 				
-				process.stdout.write(" " + ctl)
-				
 				bot.setControlState(ctl, true)
 				await sleep(baseTime + Math.random() * jitter)
 				
@@ -134,7 +178,6 @@ async function moveAroundUntilCommandAccess(bot) {
 					bot.look(Math.random() * Math.PI * 2, Math.random() * Math.PI - Math.PI / 2);
 					await sleep(baseTime * 2 + Math.random() * jitter)
                if (!moveIntervalId) return
-					process.stdout.write(" yaw")
 				}
 				
 				bot.setControlState(ctl, false)

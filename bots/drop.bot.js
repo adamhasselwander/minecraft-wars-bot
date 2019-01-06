@@ -30,18 +30,8 @@ async function dropMobCoins(masterBot, slaveBot) {
       await tossInventory(slaveBot, 
          { filter: (item) => item.displayName.indexOf('unflower') != -1 })
    }
-
-   let homeorgo = ['home', 'go'][Math.floor(Math.random() * 2)];
-
-	return new Promise((resolve, reject) => {
-   	const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: Timeout is go"))
-		}, 60 * 10 * 1000)
-
-      slaveBot.once('forcedMove', resolve)
-      slaveBot.chat('/is ' + homeorgo)
-
-   })
+   
+   await movearoundBot.goHome(slaveBot)
 
 }
 
@@ -52,6 +42,7 @@ async function dropInventory(masterBot, slaveBot, emptyStacks) {
    await setupAndTp(masterBot, slaveBot)
    await sleep(800)
    await tossInventory(slaveBot, { maxStacks: emptyStacks }) 
+   await movearoundBot.goHome(slaveBot)
 
 }
 

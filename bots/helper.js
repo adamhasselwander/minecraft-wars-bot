@@ -1,6 +1,12 @@
+const colors = require('./colors.js');
 const fs = require('fs');
 
 global.sleep = sleep;
+
+global.colors = colors;
+
+module.exports.color = color;
+module.exports.randColor = randColor;
 
 module.exports.writeAccountTimes = writeAccountTimes;
 module.exports.readAccountTimes = readAccountTimes;
@@ -10,6 +16,12 @@ module.exports.readAccountUsernames = readAccountUsernames;
 
 module.exports.writeAccountCoins = writeAccountCoins;
 module.exports.readAccountCoins = readAccountCoins;
+
+module.exports.writeAccountSignPos = writeAccountSignPos;
+module.exports.readAccountSignPos = readAccountSignPos;
+
+module.exports.getSignPosition = getSignPosition;
+module.exports.updateSignPosition = updateSignPosition;
 
 module.exports.readUsernames = readUsernames;
 
@@ -21,6 +33,15 @@ module.exports.clickItemDesc = clickItemDesc;
 
 module.exports.craftItem = craftItem;
 
+function color(string, color) {
+   return color + string + colors.Fg.White
+}
+
+function randColor(string) {
+   const colorKeys = Object.keys(colors.Fg)
+   const colorKey = colorKeys[Math.floor(colorKeys.length * Math.random())]
+   return colors.Fg[colorKey] + string + colors.Fg.White
+}
 
 async function clickItemDesc(bot, window, desc, clickBtn = 0) {
 
@@ -80,13 +101,17 @@ async function craftItem(bot, name, amount) {
 
    if (!item) throw new Error('Could not find the item')
    if (!craftingTable) throw new Error('No nerby crafting tables')
-   
-   let recipe = bot.recipesFor(item.id, null, 1, craftingTable)[0]
+
+   console.log("Trying to craft " + item.displayName +
+      " with crafting table " + Math.floor(bot.entity.position
+         .distanceTo(craftingTable.position)) + " blocks away")
+
+   let recipe = bot.recipesAll(item.id, null, craftingTable)[0]
    
    for (let i = 1; i < 10; i++) {
       if (recipe) break
       await sleep(200)
-      recipe = bot.recipesFor(item.id, null, 1, craftingTable)[0]
+      recipe = bot.recipesAll(item.id, null, craftingTable)[0]
    }
 
    if (!recipe) throw new Error('Could not find a recipe')
@@ -100,9 +125,13 @@ async function craftItem(bot, name, amount) {
 	   try {
          bot.craft(recipe, amount, craftingTable, (err) => {
             if (err) reject(new Error(err))
-            else resolve()
+            else {
+               console.log("Crafted " + item.displayName)
+               resolve()
+            }
          })
       } catch (err) {
+         console.log("Could not craft " + item.displayName)
          reject(new Error(err))
       }
 
@@ -116,21 +145,37 @@ async function disconnectSafely(bot) {
    let hasEnded = false
 	return new Promise((resolve, reject) => {
       
-      bot.on('end', () => {
-         bot.removeAllListeners()
-         hasEnded = true
+      try {
+         bot.on('end', () => {
+            try {
+               bot.removeAllListeners()
+               hasEnded = true
+               resolve()
+            } catch {
+               resolve()
+            }
+         })
+         bot.quit()
+      } catch {
          resolve()
-      })
-      
-      bot.quit()
+      }
+
       
       setTimeout(() => {
-         if (hasEnded) return;
-         bot.end()
-         setTimeout(() => {
-            bot.removeAllListeners()
+         try {
+            if (hasEnded) return;
+            bot.end()
+            setTimeout(() => {
+               try {
+                  bot.removeAllListeners()
+                  resolve()
+               } catch {
+                  resolve()
+               }
+            }, 3000) // incase end is never triggered
+         } catch {
             resolve()
-         }, 3000) // incase end is never triggered
+         }
       }, 3000)
 
    })
@@ -148,14 +193,6 @@ function readUsernames() {
 	return usernames
 }
 
-function readAccountCoins() {
-	if (!fs.existsSync('mobcoins.txt')) writeAccountCoins({});
-	return JSON.parse(fs.readFileSync('mobcoins.txt', 'utf8') || "{}")	
-}
-
-function writeAccountCoins(coins) {
-	return fs.writeFileSync('mobcoins.txt', JSON.stringify(coins, null, 2))
-}
 
 function readAccounts(printDisabled = false) {
 	const contents = fs.readFileSync('../accounts.txt', 'utf8')
@@ -194,22 +231,62 @@ function readAccounts(printDisabled = false) {
 	return accounts
 }
 
+function getSignPosition(username, fallbackPosition) {
+   const signs = readAccountSignPos()
+   let pos = signs[username]
+   if (!pos) return fallbackPosition
+
+   return { x: pos.x, y: pos.y, z: pos.z }
+}
+
+function updateSignPosition(sign, username) {
+   const signs = readAccountSignPos()
+
+   const pos = sign.position
+   signs[username] = { x: pos.x, y: pos.y, z: pos.z }
+
+   writeAccountSignPos(signs)
+}
+
+function readAccountSignPos() {
+   return readJSONFile('signs.txt')
+}
+
+function writeAccountSignPos(signs) {
+   return writeJSONFile('signs.txt', signs)
+}
+
+function readAccountCoins() {
+   return readJSONFile('mobcoins.txt')
+}
+
+function writeAccountCoins(coins) {
+   return writeJSONFile('mobcoins.txt', coins)
+}
+
 function readAccountUsernames() {
-	if (!fs.existsSync('usernames.txt')) writeAccountUsernames({});
-	return JSON.parse(fs.readFileSync('usernames.txt', 'utf8') || "{}")	
+   return readJSONFile('usernames.txt')
 }
 
 function writeAccountUsernames(usernames) {
-	return fs.writeFileSync('usernames.txt', JSON.stringify(usernames, null, 2))
+   return writeJSONFile('usernames.txt', usernames)
 }
 
 function readAccountTimes() {
-	if (!fs.existsSync('times.txt')) writeAccountTimes({});
-	return JSON.parse(fs.readFileSync('times.txt', 'utf8') || "{}")	
+   return readJSONFile('times.txt')
 }
 
 function writeAccountTimes(times) {
-	return fs.writeFileSync('times.txt', JSON.stringify(times, null, 2))
+   return writeJSONFile('times.txt', times)
+}
+
+function readJSONFile(file, object) {
+	if (!fs.existsSync(file)) writeJSONFile(file, {});
+	return JSON.parse(fs.readFileSync(file, 'utf8') || "{}")	
+}
+
+function writeJSONFile(file, object) {
+   fs.writeFileSync(file, JSON.stringify(object, null, 2))
 }
 
 function sleep(ms){
