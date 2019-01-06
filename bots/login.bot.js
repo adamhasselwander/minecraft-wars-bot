@@ -8,13 +8,13 @@ module.exports.login = login
 module.exports.waitForErrors = waitForErrors
 
 async function waitForErrors(bot, maxSecondsToWait = 10) {
- 	
+   
    return new Promise((resolve, reject) => {
-		
-		const watchDogId = setTimeout(() => {
-	      resolve()
+      
+      const watchDogId = setTimeout(() => {
+         resolve()
       }, maxSecondsToWait * 1000)
-	    
+       
       bot.on('login', onLogin)
       function onLogin() {
          bot.removeListener('login', onLogin)
@@ -33,45 +33,45 @@ async function waitForErrors(bot, maxSecondsToWait = 10) {
 }
 
 async function spawnAndLogin(bot) {
-	return new Promise((resolve, reject) => {
+   return new Promise((resolve, reject) => {
      
       const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: Login"))
-		}, 30 * 1000)
-		
-		bot.once('spawn', async () => {
-			
-			try {
-				await login(bot)
-			} catch (err) {
-				reject(err)
-				return
-			}
-			
-			resolve()			
-		})
-	})
+         reject(new Error("Timeout: Login"))
+      }, 30 * 1000)
+      
+      bot.once('spawn', async () => {
+         
+         try {
+            await login(bot)
+         } catch (err) {
+            reject(err)
+            return
+         }
+         
+         resolve()         
+      })
+   })
 }
 
 async function login(bot ) {
-	
-	let windowHasOpened = false
+   
+   let windowHasOpened = false
    let intervalId = 0
    
    console.log("Checking inventory")
 
-	return new Promise((resolve, reject) => {
-	
-		const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: Choosing server after login"))
-		}, 60 * 1000)
-		
-		bot.once('spawn', async () => {
-			bot.off('windowOpen', onWindowOpen)
-			resolve(bot)
-		})
+   return new Promise((resolve, reject) => {
+   
+      const watchDogId = setTimeout(() => {
+         reject(new Error("Timeout: Choosing server after login"))
+      }, 60 * 1000)
+      
+      bot.once('spawn', async () => {
+         bot.off('windowOpen', onWindowOpen)
+         resolve(bot)
+      })
 
-		bot.on('windowOpen', onWindowOpen)
+      bot.on('windowOpen', onWindowOpen)
 
       setTimeout(async () => {
          try {
@@ -82,11 +82,11 @@ async function login(bot ) {
          }
       })      
 
-		async function onWindowOpen(win) {
-			windowHasOpened = true
+      async function onWindowOpen(win) {
+         windowHasOpened = true
 
-			if (win.title.indexOf('Select a Server') != -1) {
-				console.log("Select server window opened");
+         if (win.title.indexOf('Select a Server') != -1) {
+            console.log("Select server window opened");
             clearInterval(intervalId)
 
             try {
@@ -95,42 +95,42 @@ async function login(bot ) {
                reject(new Error(err))
             }
 
-			} else {
-				console.warn("This window should not have been opened", win.title);
-			}
-		}
-	})
+         } else {
+            console.warn("This window should not have been opened", win.title);
+         }
+      }
+   })
 
-	async function activateCompass() {
-		windowHasOpened = false
-		
-		if (bot.currentWindow) bot.closeWindow(bot.currentWindow)
-		
-		let item = bot.inventory.slots.filter((it, index) => {
+   async function activateCompass() {
+      windowHasOpened = false
+      
+      if (bot.currentWindow) bot.closeWindow(bot.currentWindow)
+      
+      let item = bot.inventory.slots.filter((it, index) => {
             if (!it) return false
             it.slot = index 
             return it.name == 'compass'
          })
-		
-		if (item.length == 0) {
-			throw new Error("Could not find the compass")
-		}
+      
+      if (item.length == 0) {
+         throw new Error("Could not find the compass")
+      }
 
       item = item[0]
-		bot.setQuickBarSlot(1)
+      bot.setQuickBarSlot(1)
       await sleep(50)
-		bot.setQuickBarSlot(2)
+      bot.setQuickBarSlot(2)
       await sleep(200)
-		bot.setQuickBarSlot(item.slot - 36)
+      bot.setQuickBarSlot(item.slot - 36)
       
       intervalId = setInterval(() => {
 
-		   bot.activateItem();
+         bot.activateItem();
 
       }, 200)
-		
-		console.log("Activated compass")
-	}
-	
+      
+      console.log("Activated compass")
+   }
+   
 }
 

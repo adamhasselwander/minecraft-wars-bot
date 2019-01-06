@@ -10,9 +10,9 @@ module.exports.tossInventory = tossInventory
 
 async function dropMobCoins(masterBot, slaveBot) {
 
-	await loginBot.spawnAndLogin(slaveBot)
-	await activatesignBot.activateSign(slaveBot)
-	await viewmobcoinsBot.viewMobCoins(slaveBot)
+   await loginBot.spawnAndLogin(slaveBot)
+   await activatesignBot.activateSign(slaveBot)
+   await viewmobcoinsBot.viewMobCoins(slaveBot)
 
    if (slaveBot.mobCoin.count <= 0) {
       console.log('No coins, giving up early!')
@@ -37,8 +37,8 @@ async function dropMobCoins(masterBot, slaveBot) {
 
 async function dropInventory(masterBot, slaveBot, emptyStacks) {
 
-	await loginBot.spawnAndLogin(slaveBot)
-	await movearoundBot.moveAroundUntilCommandAccess(slaveBot)
+   await loginBot.spawnAndLogin(slaveBot)
+   await movearoundBot.moveAroundUntilCommandAccess(slaveBot)
    await setupAndTp(masterBot, slaveBot)
    await sleep(800)
    await tossInventory(slaveBot, { maxStacks: emptyStacks }) 
@@ -66,34 +66,34 @@ async function setupAndTp(masterBot, slaveBot) {
 }
 
 async function tpAndMove(masterBot, slaveBot) {
-	
+   
    return new Promise((resolve, reject) => {
       const watchDogId = setTimeout(() => {
          reject(new Error("Timeout: Tp and move"))
       }, 10 * 10 * 1000)
 
-		slaveBot.once('forcedMove', onForcedMove)
-		slaveBot.chat('/tpa ' + masterBot.username)
-		console.log('Sending tpa')	
+      slaveBot.once('forcedMove', onForcedMove)
+      slaveBot.chat('/tpa ' + masterBot.username)
+      console.log('Sending tpa') 
 
-		async function onForcedMove() {
-			console.log("WE TELEPORTED!!")
-			
-			masterBot.chat('/is coop ' + slaveBot.username)
-			
-			slaveBot.setControlState('left', true)
-			slaveBot.setControlState('forward', true)
+      async function onForcedMove() {
+         console.log("WE TELEPORTED!!")
+         
+         masterBot.chat('/is coop ' + slaveBot.username)
+         
+         slaveBot.setControlState('left', true)
+         slaveBot.setControlState('forward', true)
 
-			await sleep(1000)
-	
-			slaveBot.clearControlStates()
-			slaveBot.lookAt(
+         await sleep(1000)
+   
+         slaveBot.clearControlStates()
+         slaveBot.lookAt(
             masterBot.entity.position.offset(0, masterBot.entity.height / 2, 0))
-			
+         
          resolve()
-		}
+      }
 
-	})
+   })
 
 }
 

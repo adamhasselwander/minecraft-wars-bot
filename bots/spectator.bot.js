@@ -21,21 +21,21 @@ setTimeout(() => {
 
 ;
 (async function() {
-	console.log("Starting spectator")
-	console.log()
-	const usernames = helper.readUsernames();
-	let coins = helper.readAccountCoins();
-   await sleep(6000)	
+   console.log("Starting spectator")
+   console.log()
+   const usernames = helper.readUsernames();
+   let coins = helper.readAccountCoins();
+   await sleep(6000) 
    printTable(usernames, coins)
    const spectator = mineflayer.createBot({
-	  host: "pvpwars.net",
-	  port: 25565,
-	  username: username,
-	  password: password,
-	  version: '1.8',
-	  verbose: true
-	})
-	
+     host: "pvpwars.net",
+     port: 25565,
+     username: username,
+     password: password,
+     version: '1.8',
+     verbose: true
+   })
+   
    loginBot.spawnAndLogin(spectator)
    await sleep(5000)
    await movearoundBot.moveAroundUntilCommandAccess(spectator)
@@ -43,10 +43,10 @@ setTimeout(() => {
    
    console.log("Waiting for players to join")
    spectator.on('playerJoined', onPlayerJoined)
-	
-	async function onPlayerJoined(player) {
+   
+   async function onPlayerJoined(player) {
       spectator.chat('/mobcoins viewcoins ' + player.username)
-	}
+   }
 
    spectator.once('end', () => {
       process.exit()
@@ -89,18 +89,18 @@ setTimeout(() => {
       helper.writeAccountCoins(coins)
       watchDogReset = false
    }) 
-  	
-	setInterval(() => {
+   
+   setInterval(() => {
       printTable(usernames, coins)
-	}, 15 * 1000)
-		
-	
-	setInterval(async () => {
+   }, 15 * 1000)
+      
+   
+   setInterval(async () => {
       try {
-	      await moveRandom(spectator)
+         await moveRandom(spectator)
       } catch (err) {}
-	}, 60 * 1000)
-		
+   }, 60 * 1000)
+      
 })();
 
 async function moveRandom(spectator) {

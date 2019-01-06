@@ -77,11 +77,11 @@ async function clickItemDesc(bot, window, desc, clickBtn = 0) {
    console.log("Clicking", targetBlock.name) 
 
    return new Promise((resolve, reject) => {
-		
-		setTimeout(async () => {
-			reject(new Error("Timeout: Clicking item with desc"))
-		}, 10 * 1000)
-	   
+      
+      setTimeout(async () => {
+         reject(new Error("Timeout: Clicking item with desc"))
+      }, 10 * 1000)
+      
       bot.clickWindow(targetBlock.slot, 0, clickBtn, (err) => {
          if (err) reject(new Error(err))
          else resolve()
@@ -117,12 +117,12 @@ async function craftItem(bot, name, amount) {
    if (!recipe) throw new Error('Could not find a recipe')
 
    return new Promise((resolve, reject) => {
-		
-		setTimeout(() => {
-			reject(new Error("Timeout: Clicking item with desc"))
-		}, 20 * 1000)
+      
+      setTimeout(() => {
+         reject(new Error("Timeout: Clicking item with desc"))
+      }, 20 * 1000)
 
-	   try {
+      try {
          bot.craft(recipe, amount, craftingTable, (err) => {
             if (err) reject(new Error(err))
             else {
@@ -143,7 +143,7 @@ async function craftItem(bot, name, amount) {
 async function disconnectSafely(bot) {
 
    let hasEnded = false
-	return new Promise((resolve, reject) => {
+   return new Promise((resolve, reject) => {
       
       try {
          bot.on('end', () => {
@@ -182,53 +182,53 @@ async function disconnectSafely(bot) {
 }
 
 function readUsernames() {
-	const contents = readAccountUsernames()
-	
-	let usernames = []
-	
-	Object.entries(contents).forEach(([email, val]) => {
-		usernames.push(val.username);
-	});
-	
-	return usernames
+   const contents = readAccountUsernames()
+   
+   let usernames = []
+   
+   Object.entries(contents).forEach(([email, val]) => {
+      usernames.push(val.username);
+   });
+   
+   return usernames
 }
 
 
 function readAccounts(printDisabled = false) {
-	const contents = fs.readFileSync('../accounts.txt', 'utf8')
-	const lines = contents.split('\n')
-	
-	let accounts = []
-	
-	for (let line of lines) {
+   const contents = fs.readFileSync('../accounts.txt', 'utf8')
+   const lines = contents.split('\n')
+   
+   let accounts = []
+   
+   for (let line of lines) {
 
-      if (!line) continue		
+      if (!line) continue     
 
-		if (line.split(':').length < 2) {
-			console.log("Could not read the row (" + line.trim() +
+      if (line.split(':').length < 2) {
+         console.log("Could not read the row (" + line.trim() +
             ") in accounts.txt, make sure it cotains username:password")
 
-			continue
-		}
+         continue
+      }
 
       if (!line.split(':')[0]) {
          if (printDisabled) console.log('Account disabled ' + line.split(':')[1])
          continue
       }
-		
-		let parts = line.split(':')
-		const username = parts[0].trim()
-		const password = parts[1].trim()
-		
-		accounts.push({ username, password, isMaster: parts.length > 2 })
-	}
-	
+      
+      let parts = line.split(':')
+      const username = parts[0].trim()
+      const password = parts[1].trim()
+      
+      accounts.push({ username, password, isMaster: parts.length > 2 })
+   }
+   
    if (accounts.filter(acc => acc.isMaster).length > 1) 
       console.log('Warning found two masters, the first one will most likley be used')
    if (accounts.filter(acc => acc.isMaster).length < 1) 
       console.log('Warning found no master, some things may not work as expected')
 
-	return accounts
+   return accounts
 }
 
 function getSignPosition(username, fallbackPosition) {
@@ -281,8 +281,8 @@ function writeAccountTimes(times) {
 }
 
 function readJSONFile(file, object) {
-	if (!fs.existsSync(file)) writeJSONFile(file, {});
-	return JSON.parse(fs.readFileSync(file, 'utf8') || "{}")	
+   if (!fs.existsSync(file)) writeJSONFile(file, {});
+   return JSON.parse(fs.readFileSync(file, 'utf8') || "{}") 
 }
 
 function writeJSONFile(file, object) {

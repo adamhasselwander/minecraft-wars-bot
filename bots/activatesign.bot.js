@@ -6,8 +6,8 @@ const movearoundBot = require('./movearound.bot.js')
 module.exports.activateSign = activateSign
 
 async function activateSign(bot) {
-	bot.mobCoin = bot.mobCoin || {}
-	let intervalId = 0
+   bot.mobCoin = bot.mobCoin || {}
+   let intervalId = 0
    const pos = bot.entity.position
 
    const signPos = helper.getSignPosition(bot.username, pos)
@@ -19,28 +19,28 @@ async function activateSign(bot) {
       console.log('Distance to sign ' + Math.floor(distSign))
    }
 
-	await sleep(500)
-	
-	const sign = bot.findBlock({
-		matching: (it) => it && it.name.indexOf('sign') != -1,
+   await sleep(500)
+   
+   const sign = bot.findBlock({
+      matching: (it) => it && it.name.indexOf('sign') != -1,
       maxDistance: 3,
-	})
+   })
 
-	if (!sign) {
-		await getsignBot.getSign(bot)
-		return await activateSign(bot)
-	}
-	
-	console.log("Activating sign")
-	
-	return new Promise((resolve, reject) => {
-		
-		const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: Activating signs"))
-		}, 10 * 1000)
-		
+   if (!sign) {
+      await getsignBot.getSign(bot)
+      return await activateSign(bot)
+   }
+   
+   console.log("Activating sign")
+   
+   return new Promise((resolve, reject) => {
+      
+      const watchDogId = setTimeout(() => {
+         reject(new Error("Timeout: Activating signs"))
+      }, 10 * 1000)
+      
       bot.chatAddPattern(/You must wait (.*)/, "mobcoinTime")
-		bot.chatAddPattern(/ve received(.*)Mob Coins/, "mobcoinCount")
+      bot.chatAddPattern(/ve received(.*)Mob Coins/, "mobcoinCount")
       
       async function onMobcoinTime(msg) {
          console.log("Detected sign activation")
@@ -69,15 +69,15 @@ async function activateSign(bot) {
       }
 
       setTimeout(() => {
-	      bot.once("mobcoinTime", onMobcoinTime)
+         bot.once("mobcoinTime", onMobcoinTime)
          bot.once("mobcoinCount", onMobcoinCount)
       }, 500)
     
       intervalId = setInterval(() => {
-	      bot.activateBlock(sign)
+         bot.activateBlock(sign)
       }, 200)
 
-	})
+   })
 }
 
 function parseMobCoinCount(msg) {
@@ -90,15 +90,15 @@ function parseMobCoinCount(msg) {
 }
 
 function parseMobCoinTime(msg) {
-	const parts = msg.split(' ')
-	
+   const parts = msg.split(' ')
+   
    try {
 
       let min = parts[0].substring(0, parts[0].length - 1)
       let sec = parts[1].substring(0, parts[1].length - 1)
       
       min = parseInt(min)
-		sec = parseInt(sec)
+      sec = parseInt(sec)
       
       let d = new Date();
       d.setMinutes(d.getMinutes() + min)

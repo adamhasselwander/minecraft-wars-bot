@@ -15,16 +15,16 @@ async function getSign(bot) {
    await sleep(500)
 
    const sign = bot.findBlock({
-		matching: (it) => it && it.name.indexOf('sign') != -1,
-	})
+      matching: (it) => it && it.name.indexOf('sign') != -1,
+   })
 
-	if (sign) return 
-  	
-	return new Promise((resolve, reject) => {
-		
-		const watchDogId = setTimeout(() => {
-			reject(new Error("Timeout: shopping"))
-		}, 60 * 1000)
+   if (sign) return 
+   
+   return new Promise((resolve, reject) => {
+      
+      const watchDogId = setTimeout(() => {
+         reject(new Error("Timeout: shopping"))
+      }, 60 * 1000)
     
       bot.once('windowOpen', async (window) => {
 
@@ -106,7 +106,7 @@ async function getSign(bot) {
 
 
 async function placeSign(bot) {
-	
+   
    // We have a sign in inventory and are on our is.
 
    let item = bot.inventory.slots.filter((it, index) => {
@@ -133,22 +133,22 @@ async function placeSign(bot) {
 
    bot.setQuickBarSlot(item.slot - 36)
 
-	// The sign is in our hand
-	
+   // The sign is in our hand
+   
    await sleep(1000)
-	bot.placeBlock(bot.blockAt(bot.entity.position.offset(0, -1, 0)), 
+   bot.placeBlock(bot.blockAt(bot.entity.position.offset(0, -1, 0)), 
       vec3(0, 1, 0), () => {
-		      console.log('Block placed')
-	      })
-	
-	await sleep(2000)
-	console.log('Placed a sign')
-		
-	const signBlock = bot.findBlock({
-		matching: (it) => it && it.name.indexOf("sign") != -1 
-	})
-	
-	bot.updateSign(signBlock, '[mobcoin]\n\n\n')
-	
+            console.log('Block placed')
+         })
+   
+   await sleep(2000)
+   console.log('Placed a sign')
+      
+   const signBlock = bot.findBlock({
+      matching: (it) => it && it.name.indexOf("sign") != -1 
+   })
+   
+   bot.updateSign(signBlock, '[mobcoin]\n\n\n')
+   
 }
 

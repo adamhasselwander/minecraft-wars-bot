@@ -14,30 +14,30 @@ if (process.argv.length != 3 || !(mode == 'inv' || mode == 'coins')) {
 }
 
 (async function() {
-	await dropAllAccounts(mode)
+   await dropAllAccounts(mode)
    process.exit(1)
 })();
 
 async function dropAllAccounts(mode) {
-	console.log("We are going to drop stuff!");
-	console.log()
-	
-	let master = helper.readAccounts().filter(a => a.isMaster)[0]
-	if (!master) {
-		throw new Error("There is no master defined!" + 
+   console.log("We are going to drop stuff!");
+   console.log()
+   
+   let master = helper.readAccounts().filter(a => a.isMaster)[0]
+   if (!master) {
+      throw new Error("There is no master defined!" + 
          " Add a semicolon (username:password:) to set the master")
-	}
-	
-	let slaveBot = null;
-	
-	const masterBot = mineflayer.createBot({
-	  host: "pvpwars.net",
-	  port: 25565,
-	  username: master.username,
-	  password: master.password,
-	  version: '1.8',
-	  verbose: true
-	})
+   }
+   
+   let slaveBot = null;
+   
+   const masterBot = mineflayer.createBot({
+     host: "pvpwars.net",
+     port: 25565,
+     username: master.username,
+     password: master.password,
+     version: '1.8',
+     verbose: true
+   })
 
    masterBot.chatAddPattern(/\/tpaccept/, "tpAccept")
    masterBot.chatAddPattern(/.\/is coop (.*)/, "isCoop")
@@ -64,7 +64,7 @@ async function dropAllAccounts(mode) {
          if (!p) {
             console.log('Could not find user to look at ' + user)
          } else {
-			   masterBot.lookAt(
+            masterBot.lookAt(
                p.entity.position.offset(0, masterBot.entity.height / 2, 0))
          }
       }
@@ -73,7 +73,7 @@ async function dropAllAccounts(mode) {
    })
 
    await loginBot.spawnAndLogin(masterBot)
-	console.log("Master loggedin")
+   console.log("Master loggedin")
 
    await movearoundBot.moveAroundUntilCommandAccess(masterBot)
    await sleep(1000)

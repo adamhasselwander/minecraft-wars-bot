@@ -13,16 +13,16 @@ let totalMobCoinsCollected = 0
 ;
 
 (async function() {
-	console.log("Starting the bot")
-	console.log()
+   console.log("Starting the bot")
+   console.log()
 
    helper.readAccounts(true)
-	console.log()
+   console.log()
    printTimes();
-	
-	while(true) {
-		await collectMobCoinsAllAccounts()
-		
+   
+   while(true) {
+      await collectMobCoinsAllAccounts()
+      
       printTimes();
 
       const uptime = (new Date()).getTime() - startTime
@@ -31,8 +31,8 @@ let totalMobCoinsCollected = 0
       console.log("Avrage mobcoins per hour: " + 
             Math.floor(totalMobCoinsCollected / (uptime / (3600 * 1000))))
       
-		await sleep(readFileInterval)
-	}
+      await sleep(readFileInterval)
+   }
 
 })();
 
@@ -50,10 +50,10 @@ async function collectMobCoinsAllAccounts() {
          return acc
       })
 
-	for (let acc of accounts) {
-		const username = acc.username;
-		const password = acc.password;
-		
+   for (let acc of accounts) {
+      const username = acc.username;
+      const password = acc.password;
+      
       const bot = mineflayer.createBot({
         host: "pvpwars.net",
         port: 25565,
@@ -105,7 +105,7 @@ async function collectMobCoinsAllAccounts() {
       console.log()
       console.log((acc.index + 1) + ' of ' + accounts.length)
       await sleep(5000)
-	}
+   }
 }
 
 function toHumanTime(ms) {
@@ -135,20 +135,20 @@ function toHumanTime(ms) {
 function updateUsername(email, username) {
    if (!email || !username) return
 
-	const times = helper.readAccountTimes() || {}
+   const times = helper.readAccountTimes() || {}
    const usernames = helper.readAccountUsernames() // One could cache this
-	usernames[email] = usernames[email] || {};
+   usernames[email] = usernames[email] || {};
 
-	usernames[email].username = username
-	helper.writeAccountUsernames(usernames);
+   usernames[email].username = username
+   helper.writeAccountUsernames(usernames);
 
 }
 
 function updateTimeToRun(username, time) {
-	
+   
    time = time || ((new Date()).getTime() + 5 * 60 * 1000)
    const times = helper.readAccountTimes() || {}
-	
+   
    times[username] = times[username] || {};
    times[username].timetorun = time + 
       Math.floor(Math.random() * 5 * 60 * 1000) * 
@@ -159,9 +159,9 @@ function updateTimeToRun(username, time) {
 }
 
 function resetFails(username) {
-	
+   
    const times = helper.readAccountTimes() || {}
-	
+   
    times[username] = times[username] || {}
    times[username].failsInARow = 0
    
@@ -181,7 +181,7 @@ function increaseFails(username) {
 }
 
 function printTimes() {
-	
+   
    console.log()
 
    let accounts = helper.readAccounts()
@@ -203,7 +203,7 @@ function printTimes() {
 }
 
 function getTimeToRun(username) {
-	
+   
    const times = helper.readAccountTimes() // One could cache this
    
    return !times[username] ? 0 : 
