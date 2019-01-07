@@ -16,7 +16,10 @@ let watchDogReset = false
 
 setTimeout(() => {
 
-   if (watchDogReset) process.exit()
+   if (watchDogReset) {
+      process.stdout.write('Timeout triggered')
+      process.exit()
+   }
    watchDogReset = true
 
 }, 3 * 60 * 1000)
@@ -37,6 +40,10 @@ setTimeout(() => {
      verbose: true
    })
    
+   spectator.once('kicked', (reason) => {
+      process.stdout.write('kicked ' + reason)
+   })
+
    loginBot.spawnAndLogin(spectator)
    await sleep(5000)
    await movearoundBot.moveAroundUntilCommandAccess(spectator)
@@ -57,10 +64,14 @@ setTimeout(() => {
 
    spectator.once('end', () => {
       console.log('Connection ended')
+      process.stdout.write('Connecton ended')
       process.exit()
    })
    
    spectator.on('windowOpen', (window) => {
+      if (window.title.toLowerCase().indexOf('coins') != -1)
+         return
+
       let items = window.slots.filter((item, index) => {
          if (!item) return false
 
@@ -77,6 +88,8 @@ setTimeout(() => {
          return true
       })
       console.log(window.title, items.map(it => it.desc || it.displayName))
+      process.stdout.write('Window opened')
+      process.stdout.write(window.title, items.map(it => it.desc || it.displayName))
       process.exit()
    })
 

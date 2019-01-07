@@ -26,6 +26,7 @@ module.exports.updateSignPosition = updateSignPosition;
 module.exports.readUsernames = readUsernames;
 
 module.exports.readAccounts = readAccounts;
+module.exports.readAfkAccounts = readAfkAccounts;
 
 module.exports.disconnectSafely = disconnectSafely;
 
@@ -258,9 +259,12 @@ function readUsernames() {
    return usernames
 }
 
+function readAfkAccounts() {
+   return readAccounts(false, '../afk.txt')
+}
 
-function readAccounts(printDisabled = false) {
-   const contents = fs.readFileSync('../accounts.txt', 'utf8')
+function readAccounts(printDisabled = false, file = '../accounts.txt') {
+   const contents = fs.readFileSync(file, 'utf8')
    const lines = contents.split('\n')
    
    let accounts = []

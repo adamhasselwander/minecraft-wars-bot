@@ -77,7 +77,7 @@ async function onLine(line) {
    const keys = Object.keys(console.screens.buffers)
 
    if (line == 'h' || line == 'help') {
-      oldConsoleLog('Aviable screens:')
+      oldConsoleLog('Available screens:')
       const keysBold = keys.map(key => {
          if (key == currentScreenKey) 
             return helper.color(key, colors.Fg.Red)
