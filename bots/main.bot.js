@@ -1,3 +1,4 @@
+require('./consolescreens.js')
 const fs = require('fs');
 const mineflayer = require('mineflayer')
 
@@ -12,6 +13,7 @@ const startTime = (new Date()).getTime()
 let totalMobCoinsCollected = 0
 ;
 
+;
 (async function() {
    console.log("Starting the bot")
    console.log()
@@ -87,7 +89,7 @@ async function collectMobCoinsAllAccounts() {
             new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' + 
             error.message + '\n\n' + error.stack + '\n\n');
 
-         console.log('Error: ', error.message)
+         console.error('Error: ', error.message)
          increaseFails(username)
          
       } finally {
@@ -183,23 +185,41 @@ function increaseFails(username) {
 function printTimes() {
    
    console.log()
+   const usernames = helper.readAccountUsernames()
+   const times = helper.readAccountTimes()
 
    let accounts = helper.readAccounts()
    .map(acc => {
-      acc.timeLeft = getTimeToRun(acc.username)
+      const user = usernames[acc.username] ? usernames[acc.username].username : ''
+      const time = times[acc.username]
+      acc.email = acc.username
+
+      acc.username = user,
+      acc.failures = time && time.failsInARow ? time.failsInARow : 0
+      acc.timeLeft = getTimeToRun(acc.email)
+
       return acc
    })
-   .sort((a, b) => b.timeLeft - a.timeLeft)
-   .map(a => {
+
+   accounts = accounts.sort((a, b) => a.failures - b.failures)
+   logTimes('tf', accounts)
+   
+   accounts = accounts.sort((a, b) => b.timeLeft - a.timeLeft)
+   logTimes('tt', accounts)
+
+}
+
+function logTimes(screen, obj) {
+   let accounts = obj.filter(() => true).map(a => {
       const t = Math.floor(a.timeLeft / (60 * 1000))
       return { 
-         email: helper.color(a.username.padEnd(45), colors.Fg.Green), 
-         time: helper.color(t + 'min', colors.Fg.Blue)
+         email: helper.color(a.email.padEnd(45), colors.Fg.Green), 
+         time: helper.color(t + 'min', colors.Fg.Blue),
+         username: a.username,
+         fails: a.failures
       }
    })
-
-   console.log(table(accounts))
-
+   console.logScreen(screen, table(accounts, '#'))
 }
 
 function getTimeToRun(username) {

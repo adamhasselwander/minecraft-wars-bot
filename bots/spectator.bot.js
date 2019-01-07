@@ -1,3 +1,4 @@
+const console = require('./consolescreens.js')
 const fs = require('fs')
 
 const mineflayer = require('mineflayer')
@@ -10,6 +11,7 @@ const loginBot = require('./login.bot.js')
 const movearoundBot = require('./movearound.bot.js')
 const username = require('./settings').spectator.username
 const password = require('./settings').spectator.password
+let sortKey = 'mobcoins'
 let watchDogReset = false
 
 setTimeout(() => {
@@ -23,7 +25,7 @@ setTimeout(() => {
 (async function() {
    const usernames = helper.readUsernames();
    let coins = helper.readAccountCoins();
-
+   
    printTable(usernames, coins)
 
    const spectator = mineflayer.createBot({
@@ -40,17 +42,12 @@ setTimeout(() => {
    await movearoundBot.moveAroundUntilCommandAccess(spectator)
    await sleep(5000)
    
-   const items = await helper.parseMobcoinShop(spectator)
-   const tbl = {}
-   for (const item of items) {
-      tbl[item.slot] = { 
-         text: helper.color(item.desc, colors.Fg.Magenta), 
-         price: helper.color(item.price, colors.Fg.Yellow), 
-         item: item.name
-      }
-   }
-   
-   console.log(table(tbl, '#'))
+   await logShop(spectator)
+
+   setInterval(async () => {
+      await logShop(spectator)
+   }, 1000 * 60 * 60 * 2)
+
    console.log("Waiting for players to join")
    spectator.on('playerJoined', onPlayerJoined)
    
@@ -59,6 +56,7 @@ setTimeout(() => {
    }
 
    spectator.once('end', () => {
+      console.log('Connection ended')
       process.exit()
    })
    
@@ -136,8 +134,6 @@ async function moveRandom(spectator) {
 }
 
 function printTable(usernames, coins) {
-   console.log()
-   console.log()
    let arr = []
 
    for (let username of usernames) {
@@ -161,8 +157,16 @@ function printTable(usernames, coins) {
 
    }
    
+   arr.sort((a,b) => a.mins - b.mins)
+   logTables('tm', arr)
+   arr.sort((a,b) => a.lastInc - b.lastInc)
+   logTables('tl', arr)
    arr.sort((a,b) => a.mobcoins - b.mobcoins)
+   logTables('tc', arr)
+}
 
+function logTables(screen, obj) {
+   let arr = obj.filter(() => true)
    const tot = arr.length == 0 ? 0 :
       arr.map(a => a.mobcoins)
          .reduce((a, b) => a + b)
@@ -175,10 +179,27 @@ function printTable(usernames, coins) {
       username: colors.Fg.Green + (a.username || '') + colors.Fg.White,
       mobcoins: colors.Fg.Yellow + (a.mobcoins || '') + colors.Fg.White,
       mins: a.mins,
-      'last inc': a.lastInc
+      'last inc': a.lastInc > 100000 ? '---' : a.lastInc
    }))
 
-   console.log('\033['+(Object.keys(arr).length + 5) +'A')
-   console.log(table(arr, ''))
+   console.logScreen(screen, table(arr, ''))
    console.log(helper.randColor('XXXX') + '\033[1A')
 }
+
+async function logShop(spectator) {
+
+   const items = await helper.parseMobcoinShop(spectator)
+   const tbl = {}
+   for (const item of items) {
+      tbl[item.slot] = { 
+         text: helper.color(item.desc, colors.Fg.Magenta), 
+         price: helper.color(item.price, colors.Fg.Yellow), 
+         item: item.name
+      }
+   }
+   
+   console.logScreen('shop' ,table(tbl, '#'))
+
+}
+
+
