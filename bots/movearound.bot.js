@@ -1,4 +1,4 @@
-const heper = require('./helper.js')
+const helper = require('./helper.js')
 
 module.exports.moveAroundClickUntilWindow = moveAroundClickUntilWindow
 module.exports.moveAroundUntilCommandAccess = moveAroundUntilCommandAccess
