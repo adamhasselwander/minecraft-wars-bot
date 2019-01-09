@@ -11,24 +11,29 @@ const loginBot = require('./login.bot.js')
 const movearoundBot = require('./movearound.bot.js')
 const username = require('./settings').spectator.username
 const password = require('./settings').spectator.password
+
 let sortKey = 'mobcoins'
 let watchDogReset = false
+let lastCmds = []
+let lastCmdTime = 0
 
-setTimeout(() => {
+setInterval(() => {
 
    if (watchDogReset) {
       process.stdout.write('Timeout triggered')
       process.exit()
    }
+
    watchDogReset = true
 
-}, 3 * 60 * 1000)
+}, 2 * 60 * 1000)
 
 ;
 (async function() {
    const usernames = helper.readUsernames();
-   let coins = helper.readAccountCoins();
-   
+   const coins = helper.readAccountCoins();
+  
+   printTableCoins(coins, usernames, 'a', 0)
    printTable(usernames, coins)
 
    const spectator = mineflayer.createBot({
@@ -41,6 +46,9 @@ setTimeout(() => {
    })
    
    spectator.once('kicked', (reason) => {
+      for (let cmd of lastCmds)
+         process.stdout.write('cmds ' + cmd)
+
       process.stdout.write('kicked ' + reason)
    })
 
@@ -55,11 +63,17 @@ setTimeout(() => {
       await logShop(spectator)
    }, 1000 * 60 * 60 * 2)
 
+   await sleep(5000)
    console.log("Waiting for players to join")
    spectator.on('playerJoined', onPlayerJoined)
    
    async function onPlayerJoined(player) {
-      spectator.chat('/mobcoins viewcoins ' + player.username)
+      if (player.username.indexOf('§') != -1) return
+
+      lastCmds.push('/mobcoins viewcoins ' + player.username)
+      if (lastCmds.length > 10) lastCmds.shift()
+      spectator.chat('/mobcoins viewcoins ' + player.username
+         .replace(/§[0-9a-flnmokr]/g, ''))
    }
 
    spectator.once('end', () => {
@@ -95,8 +109,13 @@ setTimeout(() => {
 
    spectator.chatAddPattern(/(.*)s Mob Coins:(.*)/, "playerMobcoinCount")
    spectator.on("playerMobcoinCount", async (user, userCoins) => {
+
       const username = user.trim().slice(0, -1)
       const coin = parseInt(userCoins.trim().replace(',', ''))
+      
+      if (usernames.indexOf(username) == -1 && 
+         new Date().getTime() - lastCmdTime < 1000)
+            return
       
       coins[username] = coins[username] || {}
       if (coins[username].mobcoins < coin) 
@@ -109,6 +128,7 @@ setTimeout(() => {
 
       helper.writeAccountCoins(coins)
       watchDogReset = false
+      lastCmdTime = new Date().getTime()
    }) 
    
    setInterval(() => {
@@ -116,13 +136,40 @@ setTimeout(() => {
    }, 15 * 1000)
       
    
+   setInterval(() => {
+      printTableCoins(coins, usernames, 'a', 0)
+   }, 60 * 2 * 1000)
+
    setInterval(async () => {
       try {
          await moveRandom(spectator)
       } catch (err) {}
    }, 60 * 1000)
+   
+   setInterval(async () => {
+      try {
+         await viewAllMobcoins(spectator, 4000)
+      } catch (err) {}
+   }, 6 * 60 * 60 * 1000)
       
+   setTimeout(async () => {
+      try {
+         await viewAllMobcoins(spectator, 4000)
+      } catch (err) {}
+   })
+
 })();
+
+async function viewAllMobcoins(bot, delay) {
+   
+   const usernames = Object.keys(bot.players)
+
+   for (const username of usernames) {
+      bot.chat('/mobcoins viewcoins ' + username)
+      await sleep(delay)
+   }
+
+}
 
 async function moveRandom(spectator) {
 
@@ -147,9 +194,17 @@ async function moveRandom(spectator) {
 }
 
 function printTable(usernames, coins) {
+   let obj = {}
+   usernames.map(u => obj[u] = coins[u])
+   printTableCoins(obj, usernames) 
+}
+
+function printTableCoins(coins, usernames, screenPrefix, time = 120) {
+   screenPrefix = screenPrefix || ''
+   let coinKeys = Object.keys(coins)
    let arr = []
 
-   for (let username of usernames) {
+   for (let username of coinKeys) {
       if (!coins[username] || !coins[username].lastUpdated) continue
 
       const now = (new Date()).getTime()
@@ -159,39 +214,44 @@ function printTable(usernames, coins) {
       const lastInc = Math.floor(
          (now - (coins[username].lastCoinIncrease || 0)) / (1000 * 60)) 
 
-      if (lastUpdatedMins > 60) continue
+      if (time && lastUpdatedMins > time) continue
 
       arr.push({
          username: username.padEnd(20),
          mobcoins: coins[username].mobcoins,
          mins: lastUpdatedMins,
-         lastInc: lastInc > 100000 ? '---' : lastInc
+         lastInc: lastInc
       })
 
    }
    
    arr.sort((a,b) => a.mins - b.mins)
-   logTables('tm', arr)
+   logTables(screenPrefix + 'tm', usernames, arr)
    arr.sort((a,b) => a.lastInc - b.lastInc)
-   logTables('tl', arr)
+   logTables(screenPrefix + 'tl', usernames, arr)
    arr.sort((a,b) => a.mobcoins - b.mobcoins)
-   logTables('tc', arr)
+   logTables(screenPrefix + 'tc', usernames, arr)
 }
 
-function logTables(screen, obj) {
+
+function logTables(screen, usernames, obj) {
    let arr = obj.filter(() => true)
    const tot = arr.length == 0 ? 0 :
       arr.map(a => a.mobcoins)
          .reduce((a, b) => a + b)
 
-   arr.push({})
+   arr.push({username: ''})
    arr.push({username: 'Average', mobcoins: Math.floor(tot / (arr.length - 1))})
    arr.push({username: 'Total', mobcoins: tot})
 
    arr = arr.map(a => ({
-      username: colors.Fg.Green + (a.username || '') + colors.Fg.White,
-      mobcoins: colors.Fg.Yellow + (a.mobcoins || '') + colors.Fg.White,
-      mins: a.mins,
+      username: usernames.indexOf(a.username.trim()) != -1 ? 
+         helper.color(a.username, colors.Fg.Green) : 
+         helper.color(a.username, colors.Fg.Blue),
+      mobcoins: helper.color(a.mobcoins, colors.Fg.Yellow),
+      mins: a.mins != a.lastInc ?
+         helper.color(a.mins, colors.Fg.Red) :
+         a.mins,
       'last inc': a.lastInc > 100000 ? '---' : a.lastInc
    }))
 

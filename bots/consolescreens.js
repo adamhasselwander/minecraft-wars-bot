@@ -41,16 +41,38 @@ console.logScreen = (key, ...msg) => {
    if (!console.screens.buffers[key])
       console.screens.buffers[key] = []
    
-   if (console.screens.buffers[key].length > 100) {
-      console.screens.buffers[key].shift()
-      if (currentScreenKey == key) currentScreenIndex--
-   }
+   shortenBuff(key)
+   shortenBuff('all')
 
    console.screens.buffers[key].push(msg)
 
    if (key != 'all') 
       console.screens.buffers['all'].push(msg)
+
 };
+
+countLines = (buff) => 
+   buff.map(args => args
+         .map(row => (row.match(/\n/g)||[]).length + 1)
+         .reduce((acc, b) => acc + b, 0))
+       .reduce((acc, a) => acc + a, 0)
+
+shortenBuff = (key) => {
+   if (console.screens.buffers[key].length > 0) {
+      const lines = countLines(console.screens.buffers[key])
+
+      if (lines > 300) {
+         console.screens.buffers[key].shift()
+         if (currentScreenKey == key) currentScreenIndex--
+      }
+
+      if (console.screens.buffers[key].length > 100) {
+         console.screens.buffers[key].shift()
+         if (currentScreenKey == key) currentScreenIndex--
+      }
+   }
+};
+
 console.changeScreen = (key) => {
    const keys = Object.keys(console.screens.buffers)
    const match = keys.filter(k => k.indexOf(key) == 0).shift()
@@ -83,7 +105,7 @@ async function onLine(line) {
             return helper.color(key, colors.Fg.Red)
          return key
       })
-      oldConsoleLog(keysBold.reduce((acc, n) => acc + ' ' + n))
+      oldConsoleLog(keysBold.reduce((acc, n) => acc + ' ' + n), 0)
    } else if (line) {
       console.changeScreen(line)
    }

@@ -89,7 +89,7 @@ async function collectMobCoinsAllAccounts() {
             new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' + 
             error.message + '\n\n' + error.stack + '\n\n');
 
-         console.error('Error: ', error.message)
+         console.error('Error: ' + error.message)
          increaseFails(username)
          
       } finally {

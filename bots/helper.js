@@ -37,6 +37,7 @@ module.exports.craftItem = craftItem;
 module.exports.parseMobcoinShop = parseMobcoinShop;
 
 function color(string, color) {
+   if (!string) return ''
    return color + string + colors.Fg.White
 }
 
