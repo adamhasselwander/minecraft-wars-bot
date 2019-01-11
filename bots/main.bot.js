@@ -1,233 +1,220 @@
 require('./consolescreens.js')
-const fs = require('fs');
+const fs = require('fs')
 const mineflayer = require('mineflayer')
 
 const loginBot = require('./login.bot.js')
 const activatesignBot = require('./activatesign.bot.js')
-const movearoundBot = require('./movearound.bot.js')
 
 const helper = require('./helper.js')
 const table = require('./table.js')
 const readFileInterval = 30 * 1000
 const startTime = (new Date()).getTime()
+
 let totalMobCoinsCollected = 0
-;
 
 ;
-(async function() {
-   console.log("Starting the bot")
-   console.log()
+(async function () {
+  console.log('Starting the bot')
+  console.log()
 
-   helper.readAccounts(true)
-   console.log()
-   printTimes();
-   
-   while(true) {
-      await collectMobCoinsAllAccounts()
-      
-      printTimes();
+  helper.readAccounts(true)
+  console.log()
+  printTimes()
 
-      const uptime = (new Date()).getTime() - startTime
-      console.log("Total coins collected: " + totalMobCoinsCollected)
-      console.log("Total time spent: " + toHumanTime(uptime))
-      console.log("Avrage mobcoins per hour: " + 
-            Math.floor(totalMobCoinsCollected / (uptime / (3600 * 1000))))
-      
-      await sleep(readFileInterval)
-   }
+  while (true) {
+    await collectMobCoinsAllAccounts()
 
-})();
+    printTimes()
 
-async function collectMobCoinsAllAccounts() {
+    const uptime = (new Date()).getTime() - startTime
+    console.log('Total coins collected: ' + totalMobCoinsCollected)
+    console.log('Total time spent: ' + toHumanTime(uptime))
+    console.log('Avrage mobcoins per hour: ' +
+      Math.floor(totalMobCoinsCollected / (uptime / (3600 * 1000))))
 
-   const accounts = helper.readAccounts()
-      .map(acc => {
-         acc.timeLeft = getTimeToRun(acc.username)
-         return acc
-      })
-      .filter(acc => acc.timeLeft <= 0)
-      .sort((a, b) => b.timeLeft - a.timeLeft)
-      .map((acc, index) => {
-         acc.index = index
-         return acc
-      })
+    await sleep(readFileInterval)
+  }
+})()
 
-   for (let acc of accounts) {
-      const username = acc.username;
-      const password = acc.password;
-      
-      const bot = mineflayer.createBot({
-        host: "pvpwars.net",
-        port: 25565,
-        username: username,
-        password: password,
-        version: '1.8',
-        verbose: true
-      })
-      bot.mobCoin = {}
+async function collectMobCoinsAllAccounts () {
+  const accounts = helper.readAccounts()
+    .map(acc => {
+      acc.timeLeft = getTimeToRun(acc.username)
+      return acc
+    })
+    .filter(acc => acc.timeLeft <= 0)
+    .sort((a, b) => b.timeLeft - a.timeLeft)
+    .map((acc, index) => {
+      acc.index = index
+      return acc
+    })
 
-      console.log()
-      console.log('--- ' + username + ' ---')
+  for (let acc of accounts) {
+    const username = acc.username
+    const password = acc.password
 
-      bot.on('login', onLogin)
-      function onLogin() {
-         bot.removeListener('login', onLogin)
-         console.log('Username: ' + bot.username)
+    const bot = mineflayer.createBot({
+      host: 'pvpwars.net',
+      port: 25565,
+      username: username,
+      password: password,
+      version: '1.8',
+      verbose: true
+    })
+    bot.mobCoin = {}
+
+    console.log()
+    console.log('--- ' + username + ' ---')
+
+    bot.once('login', () => {
+      console.log('Username: ' + bot.username)
+    })
+
+    try {
+      await loginBot.waitForErrors(bot)
+      await loginBot.spawnAndLogin(bot)
+      await activatesignBot.activateSign(bot)
+      resetFails(username)
+    } catch (error) {
+      fs.appendFileSync('errors.txt',
+        bot.username + ' (' + username + '):' +
+        new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' +
+        error.message + '\n\n' + error.stack + '\n\n')
+
+      console.error(error.message, error.stack)
+      let fails = increaseFails(username)
+
+      if (fails > 10) {
+        helper.disableAccount(username)
       }
-      
-      try {
-         
-         await loginBot.waitForErrors(bot)
-         await loginBot.spawnAndLogin(bot)
-         await activatesignBot.activateSign(bot)
-         resetFails(username)
+    } finally {
+      updateUsername(username, bot.username)
+      updateTimeToRun(username, bot.mobCoin.nextSignTime)
+      totalMobCoinsCollected += (bot.mobCoin.collected || 0)
 
-      } catch (error) {
-         
-         fs.appendFileSync('errors.txt', 
-            bot.username + ' (' + username + '):' +
-            new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' + 
-            error.message + '\n\n' + error.stack + '\n\n');
+      console.log('Disconnecting from minecraft')
+      await helper.disconnectSafely(bot)
+    }
 
-         console.error('Error: ' + error.message)
-         increaseFails(username)
-         
-      } finally {
-         
-         updateUsername(username, bot.username)
-         updateTimeToRun(username, bot.mobCoin.nextSignTime)
-         totalMobCoinsCollected += (bot.mobCoin.collected || 0)
-
-         console.log("Disconnecting from minecraft")
-         await helper.disconnectSafely(bot)
-      
-      }
-      
-      console.log('--- /' + username + ' ---')
-      console.log()
-      console.log((acc.index + 1) + ' of ' + accounts.length)
-      await sleep(5000)
-   }
+    console.log('--- /' + username + ' ---')
+    console.log()
+    console.log((acc.index + 1) + ' of ' + accounts.length)
+    await sleep(5000)
+  }
 }
 
-function toHumanTime(ms) {
-   let secs = ms / 1000
-   let mins = secs / 60
-   let hours = mins / 60
-   let days = hours / 24
-   
-   secs %= 60
-   mins %= 60
-   hours %= 24
-  
-   secs = Math.floor(secs)
-   mins = Math.floor(mins)
-   hours = Math.floor(hours)
-   days = Math.floor(days)
-   
-   let res = ''
-   if (days) res += days + ' days '
-   if (days || hours) res += hours + ' hours '
-   if (days || hours || mins) res += mins + ' mins'
-   //if (secs) res += secs.toString().padStart(2, '0')
+function toHumanTime (ms) {
+  let secs = ms / 1000
+  let mins = secs / 60
+  let hours = mins / 60
+  let days = hours / 24
 
-   return res
+  secs %= 60
+  mins %= 60
+  hours %= 24
+
+  secs = Math.floor(secs)
+  mins = Math.floor(mins)
+  hours = Math.floor(hours)
+  days = Math.floor(days)
+
+  let res = ''
+  if (days) res += days + ' days '
+  if (days || hours) res += hours + ' hours '
+  if (days || hours || mins) res += mins + ' mins'
+  // if (secs) res += secs.toString().padStart(2, '0')
+
+  return res
 }
 
-function updateUsername(email, username) {
-   if (!email || !username) return
+function updateUsername (email, username) {
+  if (!email || !username) return
 
-   const times = helper.readAccountTimes() || {}
-   const usernames = helper.readAccountUsernames() // One could cache this
-   usernames[email] = usernames[email] || {};
+  const usernames = helper.readAccountUsernames() // One could cache this
+  usernames[email] = usernames[email] || {}
 
-   usernames[email].username = username
-   helper.writeAccountUsernames(usernames);
-
+  usernames[email].username = username
+  helper.writeAccountUsernames(usernames)
 }
 
-function updateTimeToRun(username, time) {
-   
-   time = time || ((new Date()).getTime() + 5 * 60 * 1000)
-   const times = helper.readAccountTimes() || {}
-   
-   times[username] = times[username] || {};
-   times[username].timetorun = time + 
-      Math.floor(Math.random() * 5 * 60 * 1000) * 
-      Math.floor(Math.pow(2, times[username].failsInARow || 0) * Math.random())
+function updateTimeToRun (username, time) {
+  time = time || ((new Date()).getTime() + 5 * 60 * 1000)
+  const times = helper.readAccountTimes() || {}
 
-   helper.writeAccountTimes(times);
+  times[username] = times[username] || {}
+  times[username].timetorun = time +
+    Math.floor(Math.random() * 5 * 60 * 1000) *
+    Math.floor(Math.pow(2, times[username].failsInARow || 0) * Math.random())
 
+  helper.writeAccountTimes(times)
 }
 
-function resetFails(username) {
-   
-   const times = helper.readAccountTimes() || {}
-   
-   times[username] = times[username] || {}
-   times[username].failsInARow = 0
-   
-   helper.writeAccountTimes(times);
+function resetFails (username) {
+  const times = helper.readAccountTimes() || {}
 
+  times[username] = times[username] || {}
+  times[username].failsInARow = 0
+
+  helper.writeAccountTimes(times)
 }
 
-function increaseFails(username) {
-   const times = helper.readAccountTimes() || {}
+function increaseFails (username) {
+  const times = helper.readAccountTimes() || {}
 
-   times[username] = times[username] || {}
-   times[username].failsInARow = times[username].failsInARow || 0
-   times[username].failsInARow++
-   
-   helper.writeAccountTimes(times);
+  times[username] = times[username] || {}
+  times[username].failsInARow = times[username].failsInARow || 0
+  times[username].failsInARow++
 
+  helper.writeAccountTimes(times)
+
+  return times[username].failsInARow
 }
 
-function printTimes() {
-   
-   console.log()
-   const usernames = helper.readAccountUsernames()
-   const times = helper.readAccountTimes()
+function printTimes () {
+  console.log()
+  const usernames = helper.readAccountUsernames()
+  const times = helper.readAccountTimes()
 
-   let accounts = helper.readAccounts()
-   .map(acc => {
+  let accounts = helper.readAccounts()
+    .map(acc => {
       const user = usernames[acc.username] ? usernames[acc.username].username : ''
       const time = times[acc.username]
       acc.email = acc.username
 
-      acc.username = user,
-      acc.failures = time && time.failsInARow ? time.failsInARow : 0
+      acc.username = user
+      acc.failures = (time && time.failsInARow) ? time.failsInARow : 0
       acc.timeLeft = getTimeToRun(acc.email)
 
       return acc
-   })
+    })
 
-   accounts = accounts.sort((a, b) => a.failures - b.failures)
-   logTimes('tf', accounts)
-   
-   accounts = accounts.sort((a, b) => b.timeLeft - a.timeLeft)
-   logTimes('tt', accounts)
+  accounts = accounts.sort((a, b) => a.failures - b.failures)
+  logTimes('tf', accounts)
 
+  accounts = accounts.sort((a, b) => b.timeLeft - a.timeLeft)
+  logTimes('tt', accounts)
 }
 
-function logTimes(screen, obj) {
-   let accounts = obj.filter(() => true).map(a => {
-      const t = Math.floor(a.timeLeft / (60 * 1000))
-      return { 
-         email: helper.color(a.email.padEnd(45), colors.Fg.Green), 
-         time: helper.color(t + 'min', colors.Fg.Blue),
-         username: a.username,
-         fails: a.failures
-      }
-   })
-   console.logScreen(screen, table(accounts, '#'))
+function logTimes (screen, obj) {
+  let maxEmailLength = obj.reduce((acc, a) => Math.max(acc, a.email.length), 0)
+  let maxTimeLength = obj.reduce((acc, a) =>
+    Math.max(acc, Math.floor(a.timeLeft / (60 * 1000)).toString().length), 0)
+
+  let accounts = obj.map(a => {
+    const t = Math.floor(a.timeLeft / (60 * 1000))
+    return {
+      email: helper.color(a.email.padEnd(maxEmailLength), colors.Fg.Green),
+      time: helper.color((t + 'min').padStart(maxTimeLength + 3), colors.Fg.Blue),
+      username: a.username,
+      fails: a.failures
+    }
+  })
+  console.logScreen(screen, table(accounts, '#'))
 }
 
-function getTimeToRun(username) {
-   
-   const times = helper.readAccountTimes() // One could cache this
-   
-   return !times[username] ? 0 : 
-      (times[username].timetorun - (new Date()).getTime())
+function getTimeToRun (username) {
+  const times = helper.readAccountTimes() // One could cache this
 
+  return !times[username] ? 0
+    : (times[username].timetorun - (new Date()).getTime())
 }
-
