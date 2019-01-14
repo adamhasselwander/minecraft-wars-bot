@@ -244,6 +244,9 @@ async function activateSign (bot) {
   try {
     const arr = await _waitFor(bot, 'mobcoinTime')
     msg = arr[0]
+    if (msg.indexOf('to create a Mob Coin Sign') != -1) {
+      throw new Error('We must wait before we can create a mob coin sign')
+    }
   } catch (err) {
     activateBlockToken.complete()
     throw err
@@ -537,12 +540,14 @@ async function _selectCompass (bot) {
 
 async function _moveRandom (bot, token) {
   const baseTime = 300; const jitter = 600
-  const ctrls = [ 'forward', 'back', 'left', 'right', 'sprint', 'jump' ]
+  const ctrls = [ 'forward', 'back', 'left', 'right', 'sprint' ]
 
   const ctl = ctrls[Math.floor(Math.random() * ctrls.length)]
 
+  let jump = true
   while (!token.completed) {
     bot.setControlState(ctl, true)
+    bot.setControlState('jump', jump)
     await sleep(baseTime + Math.random() * jitter)
 
     await sleep(Math.random() * jitter)
@@ -554,8 +559,10 @@ async function _moveRandom (bot, token) {
       if (token.completed) break
     }
 
+    bot.setControlState('jump', !jump)
     bot.setControlState(ctl, false)
     await sleep(Math.random() * jitter)
+    jump = !jump
   }
 
   bot.clearControlStates()
