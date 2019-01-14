@@ -5,11 +5,13 @@ const mineflayer = require('mineflayer')
 const table = require('./table.js')
 const colors = require('./colors.js')
 
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
+
 const helper = require('./helper.js')
-const loginBot = require('./login.bot.js')
-const movearoundBot = require('./movearound.bot.js')
+
 const username = require('./settings').spectator.username
 const password = require('./settings').spectator.password
+const server = require('./settings.js').serverBlock
 
 let watchDogReset = false
 let lastCmds = []
@@ -38,19 +40,22 @@ setInterval(() => {
     username: username,
     password: password,
     version: '1.8',
-    verbose: true
+    verbose: true,
+    plugins: {
+      pvpwars: pvpwarsPlugin
+    }
   })
 
   spectator.once('kicked', (reason) => {
-    for (let cmd of lastCmds) { process.stdout.write('cmds ' + cmd) }
-
-    process.stdout.write('kicked ' + reason)
+    let cmds = lastCmds.reduce((acc, cmd) => acc += cmd, '')
+    process.stdout.write('cmds ' + cmds)
+    process.stdout.write('\nkicked ' + reason)
   })
 
-  loginBot.spawnAndLogin(spectator)
-  await sleep(5000)
-  await movearoundBot.moveAroundUntilCommandAccess(spectator)
-  await sleep(5000)
+  await spectator.pvpwars.selectServer(server)
+  await sleep(1000)
+  await spectator.pvpwars.getCommandAccess()
+  await sleep(1000)
 
   await logShop(spectator)
 
@@ -245,7 +250,7 @@ function logTables (screen, usernames, obj) {
 }
 
 async function logShop (spectator) {
-  const items = await helper.parseMobcoinShop(spectator)
+  const items = await spectator.pvpwars.parseMobcoinShop(createToken(0))
   const tbl = {}
   for (const item of items) {
     tbl[item.slot] = {

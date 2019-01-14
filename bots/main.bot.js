@@ -2,11 +2,13 @@ require('./consolescreens.js')
 const fs = require('fs')
 const mineflayer = require('mineflayer')
 
-const loginBot = require('./login.bot.js')
-const activatesignBot = require('./activatesign.bot.js')
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
 
 const helper = require('./helper.js')
 const table = require('./table.js')
+
+const server = require('./settings.js').serverBlock
+
 const readFileInterval = 30 * 1000
 const startTime = (new Date()).getTime()
 
@@ -29,7 +31,7 @@ let totalMobCoinsCollected = 0
     const uptime = (new Date()).getTime() - startTime
     console.log('Total coins collected: ' + totalMobCoinsCollected)
     console.log('Total time spent: ' + toHumanTime(uptime))
-    console.log('Avrage mobcoins per hour: ' +
+    console.log('Average mobcoins per hour: ' +
       Math.floor(totalMobCoinsCollected / (uptime / (3600 * 1000))))
 
     await sleep(readFileInterval)
@@ -59,9 +61,11 @@ async function collectMobCoinsAllAccounts () {
       username: username,
       password: password,
       version: '1.8',
-      verbose: true
+      verbose: true,
+      plugins: {
+        pvpwarsPlugin
+      }
     })
-    bot.mobCoin = {}
 
     console.log()
     console.log('--- ' + username + ' ---')
@@ -71,9 +75,10 @@ async function collectMobCoinsAllAccounts () {
     })
 
     try {
-      await loginBot.waitForErrors(bot)
-      await loginBot.spawnAndLogin(bot)
-      await activatesignBot.activateSign(bot)
+      await bot.pvpwars.selectServer(server)
+      await sleep(1500)
+      await bot.pvpwars.activateSign()
+
       resetFails(username)
     } catch (error) {
       fs.appendFileSync('errors.txt',
@@ -84,7 +89,7 @@ async function collectMobCoinsAllAccounts () {
       console.error(error.message, error.stack)
       let fails = increaseFails(username)
 
-      if (fails > 10) {
+      if (fails > 8) {
         helper.disableAccount(username)
       }
     } finally {
@@ -93,7 +98,7 @@ async function collectMobCoinsAllAccounts () {
       totalMobCoinsCollected += (bot.mobCoin.collected || 0)
 
       console.log('Disconnecting from minecraft')
-      await helper.disconnectSafely(bot)
+      await bot.disconnectSafely()
     }
 
     console.log('--- /' + username + ' ---')

@@ -8,12 +8,15 @@ let rl = readline.createInterface({
 
 const mineflayer = require('mineflayer')
 
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
+
+const server = require('./settings.js').serverBlock
+
 const helper = require('./helper.js')
 const table = require('./table.js')
-const loginBot = require('./login.bot.js')
-const movearoundBot = require('./movearound.bot.js');
 
-(async function () {
+
+;(async function () {
   let item = await getItemToBuy()
   await buyItemOnAllAccounts(item)
 })()
@@ -31,7 +34,10 @@ async function buyItemOnAllAccounts (item) {
       username: username,
       password: password,
       version: '1.8',
-      verbose: true
+      verbose: true,
+      plugins: {
+        pvpwarsPlugin
+      }
     })
 
     console.log()
@@ -39,9 +45,8 @@ async function buyItemOnAllAccounts (item) {
     console.log()
 
     try {
-      await loginBot.waitForErrors(bot)
-      await loginBot.spawnAndLogin(bot)
-      await movearoundBot.moveAroundUntilCommandAccess(bot)
+      await bot.pvpwars.selectServer(server)
+      await bot.pvpwars.getCommandAccess()
       await sleep(1000)
       console.log()
       await buyItem(bot, item)
@@ -49,7 +54,7 @@ async function buyItemOnAllAccounts (item) {
       console.log(err)
     } finally {
       console.log('Disconnecting player ' + bot.username)
-      await helper.disconnectSafely(bot)
+      await bot.disconnectSafely()
     }
 
     console.log()
@@ -78,13 +83,17 @@ async function getItemToBuy () {
     username: master.username,
     password: master.password,
     version: '1.8',
-    verbose: true
+    verbose: true,
+    plugins: {
+      pvpwarsPlugin
+    }
   })
 
-  await loginBot.spawnAndLogin(masterBot)
-  await movearoundBot.moveAroundUntilCommandAccess(masterBot)
-  const items = await helper.parseMobcoinShop(masterBot)
-  await helper.disconnectSafely(masterBot)
+  await masterBot.pvpwars.selectServer(server)
+  await masterBot.pvpwars.getCommandAccess()
+
+  const items = await masterBot.pvpwars.parseMobcoinShop()
+  await masterBot.disconnectSafely()
 
   const tbl = {}
   for (const item of items) {

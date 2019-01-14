@@ -1,9 +1,11 @@
 require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 
-const loginBot = require('./login.bot.js')
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
 
+const server = require('./settings.js').serverBlock
 const helper = require('./helper.js')
+
 const bots = [] // I fear the bots will be garbage collected if i don't do this.
 const retryDelay = 5 * 60 * 1000
 
@@ -24,7 +26,10 @@ const retryDelay = 5 * 60 * 1000
       username: username,
       password: password,
       version: '1.8',
-      verbose: true
+      verbose: true,
+      plugins: {
+        pvpwarsPlugin
+      }
     })
 
     console.log()
@@ -35,13 +40,17 @@ const retryDelay = 5 * 60 * 1000
     })
 
     try {
-      await loginBot.waitForErrors(bot)
-      await loginBot.spawnAndLogin(bot)
+      await bot.pvpwars.selectServer(server)
       bots.push(bot)
       console.log('Bot ' + bot.username + ' is up and running')
-    } catch (error) {
+    } catch (err) {
+      console.log(err)
       console.log('Disconnecting from minecraft')
-      await helper.disconnectSafely(bot)
+      await bot.disconnectSafely()
+
+      setTimeout(async () => {
+        await retryLogin(email, password)
+      }, retryDelay)
     }
 
     await sleep(1000)
@@ -67,21 +76,24 @@ async function retryLogin (email, password) {
     username: email,
     password: password,
     version: '1.8',
-    verbose: true
+    verbose: true,
+    plugins: {
+      pvpwarsPlugin
+    }
   })
 
   bot.email = email
   bot.password = password
 
   try {
-    await loginBot.waitForErrors(bot)
-    await loginBot.spawnAndLogin(bot)
+    await bot.pvpwars.selectServer(server)
     bots.push(bot)
     bot.on('end', onEnd)
     console.log('Bot ' + bot.username + ' successfully reloged')
   } catch (err) {
+    console.log(err)
     console.log('Disconnecting from minecraft')
-    await helper.disconnectSafely(bot)
+    await bot.disconnectSafely()
 
     setTimeout(async () => {
       await retryLogin(email, password)

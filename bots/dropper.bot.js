@@ -1,10 +1,10 @@
 require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
+
 const helper = require('./helper.js')
-const loginBot = require('./login.bot.js')
-const dropBot = require('./drop.bot.js')
-const movearoundBot = require('./movearound.bot.js')
+const server = require('./settings.js').serverBlock
 
 const mode = process.argv[2]
 if (process.argv.length !== 3 || !(mode === 'inv' || mode === 'coins')) {
@@ -33,7 +33,10 @@ async function dropAllAccounts (mode) {
     username: master.username,
     password: master.password,
     version: '1.8',
-    verbose: true
+    verbose: true,
+    plugins: {
+      pvpwarsPlugin
+    }
   })
 
   masterBot.chatAddPattern(/\/tpaccept/, 'tpAccept')
@@ -66,16 +69,20 @@ async function dropAllAccounts (mode) {
       }
     }
 
-    dropBot.tossInventory(masterBot)
+    masterBot.pvpwars.tossInventory()
   })
 
-  await loginBot.spawnAndLogin(masterBot)
+  try {
+    await masterBot.pvpwars.selectServer(server)
+  } catch(err) {
+    console.log(err)
+    return
+  }
+
   console.log('Master loggedin')
 
-  await movearoundBot.moveAroundUntilCommandAccess(masterBot)
   await sleep(1000)
-
-  await movearoundBot.goHome(masterBot)
+  await masterBot.pvpwars.goHome()
   await sleep(1000)
   const homePos = masterBot.entity.position
 
@@ -106,7 +113,7 @@ async function dropAllAccounts (mode) {
 
     if (masterBot.entity.position.distanceTo(homePos) > 10) {
       console.log('Master seems to have moved away from home, telporting back')
-      await movearoundBot.goHome(masterBot)
+      await masterBot.pvpwars.goHome()
     }
 
     console.log()
@@ -119,14 +126,17 @@ async function dropAllAccounts (mode) {
       username: acc.username,
       password: acc.password,
       version: '1.8',
-      verbose: true
+      verbose: true,
+      plugins: {
+        pvpwarsPlugin
+      }
     })
 
     try {
-      await loginBot.waitForErrors(slaveBot)
+      await slaveBot.pvpwars.selectServer(server)
 
       if (mode === 'coins') {
-        await dropBot.dropMobCoins(masterBot, slaveBot)
+        await slaveBot.dropMobCoins(masterBot)
         console.log('Done dropping coins for ' + slaveBot.username)
       } else if (mode === 'inv') {
         let emptyStacks = masterBot.inventory.slots.filter(it => !it).length
@@ -134,7 +144,7 @@ async function dropAllAccounts (mode) {
         if (emptyStacks <= 0) break
 
         console.log('Max stacks to drop: ' + emptyStacks)
-        await dropBot.dropInventory(masterBot, slaveBot, emptyStacks)
+        await slaveBot.pvpwars.dropInventory(masterBot)
         console.log('Done dropping inventory for ' + slaveBot.username)
       }
     } catch (err) {
@@ -142,21 +152,19 @@ async function dropAllAccounts (mode) {
       console.log('There was an error, it is printed above')
     } finally {
       console.log('Disconnecting pawn')
-      slaveBot.removeAllListeners()
-      await sleep(5000)
-      await helper.disconnectSafely(slaveBot)
+      await slaveBot.disconnectSafely()
     }
 
     console.log('--- /Dropping for ' + acc.username + ' ---')
+    await sleep(6000)
     console.log()
   }
 
   clearTimeout(depositId)
   console.log('Disconnecting master')
 
-  masterBot.removeAllListeners()
-  await movearoundBot.goHome(masterBot)
+  await masterBot.pvpwars.goHome()
   await sleep(1000)
 
-  await helper.disconnectSafely(masterBot)
+  await masterBot.disconnectSafely()
 }

@@ -2,9 +2,11 @@ require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 const blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer)
 
-const loginBot = require('./login.bot.js')
+const pvpwarsPlugin = require('./pvpwars.plugin.js')
+
 const helper = require('./helper.js')
 
+const server = require('./settings.js').serverBlock
 const username = require('./settings.js').sell.username
 const password = require('./settings.js').sell.password
 
@@ -19,10 +21,12 @@ const password = require('./settings.js').sell.password
     username: username,
     password: password,
     version: '1.8',
-    verbose: true
+    verbose: true,
+    plugins: {
+      pvpwarsPlugin,
+      blockFinderPlugin
+    }
   })
-
-  bot.loadPlugin(blockFinderPlugin)
 
   bot.on('login', onLogin)
   function onLogin () {
@@ -31,16 +35,14 @@ const password = require('./settings.js').sell.password
   }
 
   try {
-    await loginBot.waitForErrors(bot)
-    await loginBot.spawnAndLogin(bot)
-    // await movearoundBot.moveAroundUntilCommandAccess(bot)
+    await bot.pvpwars.selectServer(server)
     await sleep(1000)
     await clickSignsForever(bot)
   } catch (error) {
     console.log(error)
   } finally {
     console.log('Disconnecting from minecraft')
-    await helper.disconnectSafely(bot)
+    await bot.disconnectSafely()
   }
 })()
 
