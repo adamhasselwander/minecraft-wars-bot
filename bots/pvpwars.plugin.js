@@ -135,12 +135,12 @@ async function parseMobcoinShop (bot) {
 }
 
 async function goHome (bot) {
-  await getCommandAccess(bot) 
+  await getCommandAccess(bot)
   bot.clearControlStates()
 
   bot.chatAddPattern(/Teleporting you to your island/, 'home')
   bot.chatAddPattern(/You do not have an island/, 'missingHome')
-  
+
   const homePromise = _waitFor(bot, 'home')
     .then(onHome)
   const noHomePromise = _waitFor(bot, 'missingHome')
@@ -149,9 +149,9 @@ async function goHome (bot) {
   console.log('Trying to teleport home')
   bot.chat('/is home')
   bot.clearControlStates()
-  
+
   // I think this is how to use promises
-  await Promise.race([homePromise, noHomePromise]) 
+  await Promise.race([homePromise, noHomePromise])
   await sleep(400)
 
   async function onHome () {
@@ -182,7 +182,7 @@ async function getCommandAccess (bot) {
   console.log('Moving around')
 
   const moveToken = createToken(30 * 1000)
-  const movePromise = _moveRandom(bot, moveToken)
+  _moveRandom(bot, moveToken)
 
   bot.chatAddPattern(/Unknown command. Type/, 'unknownCmd')
 
@@ -221,7 +221,7 @@ async function activateSign (bot) {
   }
 
   const sign = _getMobcoinSign(bot)
-  
+
   if (!sign) {
     console.log('Could not find the sign')
     await getSign(bot)
@@ -238,7 +238,7 @@ async function activateSign (bot) {
   setTokenInterval(activateBlockToken, () => {
     bot.activateBlock(sign)
   }, 200)
-  
+
   let msg
 
   try {
@@ -252,7 +252,7 @@ async function activateSign (bot) {
   console.log('Detected sign activation')
   activateBlockToken.complete()
 
-  await sleep(200) 
+  await sleep(200)
   bot.off('mobcoinCount', onMobcoinCount)
 
   const time = _parseMobCoinTime(msg)
@@ -265,8 +265,6 @@ async function activateSign (bot) {
     (new Date()).getTime()) / (60 * 1000))
   console.log('Time until next reward ' + timeMin + 'min')
 
-  if (!timeMin || timeMin == NaN || timeMin + '' == 'NaN') console.log('NAN:', msg)
-
   async function onMobcoinCount (msg) {
     console.log('Found mobcoins to collect')
     helper.updateSignPosition(sign, bot.username)
@@ -274,8 +272,8 @@ async function activateSign (bot) {
   }
 }
 
-function _getMobcoinSign(bot) {
-  return sign = bot.findBlock({
+function _getMobcoinSign (bot) {
+  return bot.findBlock({
     matching: (it) => it && it.name.indexOf('sign') !== -1,
     maxDistance: 4
   })
@@ -288,7 +286,7 @@ async function getSign (bot) {
 
   const sign = _getMobcoinSign(bot)
   if (sign) return
- 
+
   bot.chat('/shop blocks')
 
   const shopBlocksWindow = await _waitForWindow(bot, '')
@@ -307,7 +305,7 @@ async function getSign (bot) {
   await bot.clickItemDesc(shopWoodWindow, 'CONFIRM')
 
   bot.chatAddPattern(/You successfully bought/, 'shopped')
-  
+
   _waitFor(bot, 'shopped')
   console.log('Chopped some wood, will try to craft')
 
@@ -381,7 +379,7 @@ async function dropInventory (masterBot, slaveBot) {
   await goHome(slaveBot)
 }
 
-function setTokenInterval(token, fn, time) {
+function setTokenInterval (token, fn, time) {
   const intervalId = setInterval(() => {
     if (token.completed) {
       clearInterval(intervalId)
@@ -400,12 +398,12 @@ async function selectServer (bot, serverBlock) {
   console.log('Selected compass')
 
   const moveToken = createToken(0)
-  const movePromise = _moveRandom(bot, moveToken)
+  _moveRandom(bot, moveToken)
 
   setTokenInterval(moveToken, () => {
     bot.activateItem()
   }, 200)
-  
+
   let window
 
   try {
@@ -417,7 +415,7 @@ async function selectServer (bot, serverBlock) {
 
   console.log('Activated compass')
   moveToken.complete()
-  
+
   await sleep(500)
   await bot.clickItemDesc(window, serverBlock)
 
@@ -425,11 +423,11 @@ async function selectServer (bot, serverBlock) {
   setTokenInterval(clickToken, async () => {
     try {
       await bot.clickItemDesc(window, serverBlock)
-    } catch (err) { 
+    } catch (err) {
       console.error('Suppressing error', err.message)
     }
   }, 2000)
-  
+
   try {
     await _waitForSpawn(bot)
   } catch (err) {
@@ -441,7 +439,6 @@ async function selectServer (bot, serverBlock) {
 
   console.log('Logged in to', serverBlock)
 }
-
 
 async function _setupAndTp (masterBot, slaveBot) {
   slaveBot.chatAddPattern(/coopaccept/, 'coopAccept')
@@ -628,13 +625,12 @@ async function _placeSign (bot) {
   await sleep(2000)
   console.log('Placed a sign')
 
-  const s2gnBlock = _getMobcoinSign(bot)
+  const signBlock = _getMobcoinSign(bot)
 
   bot.updateSign(signBlock, '[mobcoin]\n\n\n')
 }
 
-
-function _waitForSpawn(bot) {
+function _waitForSpawn (bot) {
   return new Promise((resolve, reject) => {
     const onSpawn = () => {
       bot.off('error', onError)
@@ -649,7 +645,7 @@ function _waitForSpawn(bot) {
     setTimeout(() => {
       bot.off('spawn', onSpawn)
       bot.off('error', onError)
-      reject(new Error("Spawn took too long"))
+      reject(new Error('Spawn took too long'))
     }, 20 * 1000)
 
     bot.on('spawn', onSpawn)
@@ -657,13 +653,13 @@ function _waitForSpawn(bot) {
   })
 }
 
-async function _waitForWindow(bot, title, token = createToken(10 * 1000)) {
-  const condition = (window) => window.title.indexOf(title) != -1 
+async function _waitForWindow (bot, title, token = createToken(10 * 1000)) {
+  const condition = (window) => window.title.indexOf(title) !== -1
   const arr = await _waitFor(bot, 'windowOpen', { condition, token })
   return arr[0]
 }
 
-function _waitFor(bot, event, { condition = () => true, token = createToken(20 * 1000) } = {}) {
+function _waitFor (bot, event, { condition = () => true, token = createToken(20 * 1000) } = {}) {
   return new Promise((resolve, reject) => {
     if (token.completed) {
       resolve()
@@ -678,7 +674,7 @@ function _waitFor(bot, event, { condition = () => true, token = createToken(20 *
     }
 
     const oldComplete = token.complete
-    token.complete = function() {
+    token.complete = function () {
       oldComplete()
       reject(new Error('Token completed before waitFor ' + event))
     }

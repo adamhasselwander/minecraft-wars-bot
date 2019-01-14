@@ -4,7 +4,7 @@ const blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer)
 
 const pvpwarsPlugin = require('./pvpwars.plugin.js')
 
-const helper = require('./helper.js')
+require('./helper.js')
 
 const server = require('./settings.js').serverBlock
 const username = require('./settings.js').sell.username

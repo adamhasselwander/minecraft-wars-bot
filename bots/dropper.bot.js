@@ -74,7 +74,7 @@ async function dropAllAccounts (mode) {
 
   try {
     await masterBot.pvpwars.selectServer(server)
-  } catch(err) {
+  } catch (err) {
     console.log(err)
     return
   }

@@ -47,7 +47,7 @@ setInterval(() => {
   })
 
   spectator.once('kicked', (reason) => {
-    let cmds = lastCmds.reduce((acc, cmd) => acc += cmd, '')
+    let cmds = lastCmds.reduce((acc, cmd) => acc + cmd, '')
     process.stdout.write('cmds ' + cmds)
     process.stdout.write('\nkicked ' + reason)
   })

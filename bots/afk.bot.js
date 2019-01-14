@@ -49,7 +49,7 @@ const retryDelay = 5 * 60 * 1000
       await bot.disconnectSafely()
 
       setTimeout(async () => {
-        await retryLogin(email, password)
+        await retryLogin(username, password)
       }, retryDelay)
     }
 

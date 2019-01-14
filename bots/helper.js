@@ -33,7 +33,7 @@ module.exports.readAfkAccounts = readAfkAccounts
 
 module.exports.disableAccount = disableAccount
 
-function createChildToken(parentToken, expires) {
+function createChildToken (parentToken, expires) {
   const token = createToken(expires)
 
   const parentTokenCancel = parentToken.cancel
@@ -52,7 +52,7 @@ function createChildToken(parentToken, expires) {
   return token
 }
 
-function createToken(expires = 10 * 1000) {
+function createToken (expires = 10 * 1000) {
   expires = expires || 60 * 1000
 
   const token = {
@@ -62,7 +62,7 @@ function createToken(expires = 10 * 1000) {
       token.canceled = true
       token.complete()
     },
-    complete: () => token.completed = true,
+    complete: () => { token.completed = true },
     completed: false,
     expires
   }

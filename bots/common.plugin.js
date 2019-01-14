@@ -7,23 +7,6 @@ function inject (bot) {
   bot.clickItemDesc = (window, desc, clickBtn = 0) => clickItemDesc(bot, window, desc, clickBtn)
   bot.craftItem = (name, amount) => craftItem(bot, name, amount)
   bot.disconnectSafely = () => disconnectSafely(bot)
-  bot.getErrorPromise = () => getErrorPromise(bot)
-}
-
-function getErrorPromise(bot) {
-  return new Promise((resolve, reject) => {
-    bot.on('error', reject)
-  })
-}
-
-function runSafely(bot, token, fn, args) {
-  const errorPromise = getErrorPromise(bot)
-  errorPromise.catch(() => {
-    token.cancel()
-  })
-
-  args.push(token)
-  return Promise.race([fn(...args), errorPromise])
 }
 
 async function clickItemDesc (bot, window, desc, clickBtn = 0) {
@@ -143,4 +126,3 @@ async function disconnectSafely (bot) {
     }, 3000)
   })
 }
-

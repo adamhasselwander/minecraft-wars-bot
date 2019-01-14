@@ -15,7 +15,6 @@ const server = require('./settings.js').serverBlock
 const helper = require('./helper.js')
 const table = require('./table.js')
 
-
 ;(async function () {
   let item = await getItemToBuy()
   await buyItemOnAllAccounts(item)
