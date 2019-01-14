@@ -309,16 +309,16 @@ async function getSign (bot) {
   _waitFor(bot, 'shopped')
   console.log('Chopped some wood, will try to craft')
 
-  bot.closeWindow(window)
+  bot.closeWindow(shopWoodWindow)
 
   await _waitForItem(bot, 'log', 2)
-  await helper.craftItem(bot, 'planks', 2)
+  await bot.craftItem('planks', 2)
 
   await _waitForItem(bot, 'planks', 8)
-  await helper.craftItem(bot, 'stick', 1)
+  await bot.craftItem('stick', 1)
 
   await _waitForItem(bot, 'stick', 1)
-  await helper.craftItem(bot, 'sign', 1)
+  await bot.craftItem('sign', 1)
 
   await _waitForItem(bot, 'sign', 1)
   await _placeSign(bot)
