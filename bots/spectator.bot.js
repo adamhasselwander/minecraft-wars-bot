@@ -56,6 +56,7 @@ setInterval(() => {
   await sleep(1000)
   await spectator.pvpwars.getCommandAccess()
   await sleep(1000)
+  spectator.pvpwars.runAllCommands()
 
   await logShop(spectator)
 

@@ -71,6 +71,10 @@ async function craftItem (bot, name, amount) {
   if (!recipe) throw new Error('Could not find a recipe')
 
   return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error('Crafting took too long'))
+    }, 15 * 1000)
+
     try {
       bot.craft(recipe, amount, craftingTable, (err) => {
         if (err) reject(err)

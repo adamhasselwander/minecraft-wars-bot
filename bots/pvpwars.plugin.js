@@ -27,8 +27,26 @@ function inject (bot) {
     dropInventory: (masterBot) => dropInventory(masterBot, bot),
     tossInventory: (options) => tossInventory(bot, options),
     parseMobcoinShop: () => parseMobcoinShop(bot),
-    parseIsTop: () => parseIsTop(bot)
+    parseIsTop: () => parseIsTop(bot),
+    acceptAllTps: () => acceptAllTps(bot),
+    runAllCommands: () => runAllCommands(bot)
   }
+}
+
+function acceptAllTps(bot) {
+  bot.chatAddPattern(/\/tpaccept/, 'tpAccept')
+  bot.on('tpAccept', () => {
+    bot.chat('/tpaccept')
+    console.log('Sending tpaccept')
+  })
+}
+
+function runAllCommands(bot) {
+  bot.chatAddPattern(/me.*\.(\/.*)/, 'cmd')
+  bot.on('cmd', (cmd) => {
+    bot.chat(cmd)
+    console.log('Executing ' + cmd)
+  })
 }
 
 async function parseIsTop (bot) {
@@ -450,24 +468,25 @@ async function _setupAndTp (masterBot, slaveBot) {
     console.log('Sending /is coopaccept')
   })
 
+  masterBot.chat('/is coop ' + slaveBot.username)
+
   let d = 0
   do {
     await _tpAndMove(masterBot, slaveBot)
+    await sleep(1200)
+
     d = slaveBot.entity.position.distanceTo(masterBot.entity.position)
     console.log('Distance between bots: ' + d)
-    await sleep(600)
   }
-  while (d > 3.6 || d < 1.5)
+  while (d > 3.8 || d < 1.3)
 }
 
 async function _tpAndMove (masterBot, slaveBot) {
   slaveBot.chat('/tpa ' + masterBot.username)
   console.log('Sending tpa')
 
-  await _waitFor(slaveBot, 'forcedMove')
+  await _waitFor(slaveBot, 'forcedMove', { token: createToken(30 * 1000) })
   console.log('WE TELEPORTED!!')
-
-  masterBot.chat('/is coop ' + slaveBot.username)
 
   slaveBot.setControlState('left', true)
   slaveBot.setControlState('forward', true)

@@ -39,23 +39,10 @@ async function dropAllAccounts (mode) {
     }
   })
 
-  masterBot.chatAddPattern(/\/tpaccept/, 'tpAccept')
-  masterBot.chatAddPattern(/.\/is coop (.*)/, 'isCoop')
-  masterBot.chatAddPattern(/.\/drop inv(.*)/, 'dropInv')
+  masterBot.pvpwars.acceptAllTps()
+  masterBot.pvpwars.runAllCommands()
 
-  masterBot.on('tpAccept', () => {
-    masterBot.chat('/tpaccept')
-    console.log('Sending tpaccept')
-  })
-
-  masterBot.on('isCoop', (msg) => {
-    let username = msg.trim().split(' ')[0].trim()
-
-    masterBot.chat('/is coop ' + username)
-    console.log('Sending /is coop ' + username)
-    console.log("'" + msg + "'")
-  })
-
+  masterBot.chatAddPattern(/me.*drop inv (.*)/, 'dropInv')
   masterBot.on('dropInv', (user) => {
     if (user && user.trim()) {
       user = user.trim()
@@ -161,6 +148,12 @@ async function dropAllAccounts (mode) {
   }
 
   clearTimeout(depositId)
+
+
+  console.log()
+  console.log('Done!!')
+  await sleep(60 * 1000)
+
   console.log('Disconnecting master')
 
   await masterBot.pvpwars.goHome()
