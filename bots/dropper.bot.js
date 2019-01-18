@@ -21,7 +21,7 @@ async function dropAllAccounts (mode) {
   console.log('We are going to drop stuff!')
   console.log()
 
-  let master = helper.readAccounts().filter(a => a.isMaster)[0]
+  const master = helper.readAccounts().filter(a => a.isMaster)[0]
   if (!master) {
     throw new Error('There is no master defined!' +
       ' Add a semicolon (username:password:) to set the master')
@@ -62,7 +62,8 @@ async function dropAllAccounts (mode) {
   try {
     await masterBot.pvpwars.selectServer(server)
   } catch (err) {
-    console.log(err)
+    console.error(err)
+    console.log('Could not login with the master')
     return
   }
 
@@ -80,11 +81,11 @@ async function dropAllAccounts (mode) {
     if (mode !== 'coins') return
 
     console.log('Depositing mobcoins')
-    let coinsInInventory = masterBot.inventory.items()
+    const coinsInInventory = masterBot.inventory.items()
       .filter(item => item.displayName.indexOf('unflower') !== -1)
       .map(item => item.count).reduce((a, b) => a + b, 0)
 
-    let coinsToDeposit = coinsInInventory - Math.floor(Math.random() * 200)
+    const coinsToDeposit = coinsInInventory - Math.floor(Math.random() * 200)
 
     if (coinsToDeposit > 100) {
       console.log('Total mobcoins in inventory: ' + coinsInInventory +
@@ -94,8 +95,13 @@ async function dropAllAccounts (mode) {
 
     depositId = setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
   }
+  const accounts = helper.readAccounts()
+    .map((acc, index) => {
+      acc.index = index
+      return acc
+    })
 
-  for (let acc of helper.readAccounts()) {
+  for (const acc of accounts) {
     if (acc.username === master.username) continue
 
     if (masterBot.entity.position.distanceTo(homePos) > 10) {
@@ -126,8 +132,7 @@ async function dropAllAccounts (mode) {
         await slaveBot.dropMobCoins(masterBot)
         console.log('Done dropping coins for ' + slaveBot.username)
       } else if (mode === 'inv') {
-        let emptyStacks = masterBot.inventory.slots.filter(it => !it).length
-        emptyStacks -= 9
+        const emptyStacks = masterBot.inventory.slots.filter(it => !it).length - 9
         if (emptyStacks <= 0) break
 
         console.log('Max stacks to drop: ' + emptyStacks)
@@ -135,7 +140,7 @@ async function dropAllAccounts (mode) {
         console.log('Done dropping inventory for ' + slaveBot.username)
       }
     } catch (err) {
-      console.log(err)
+      console.error(err)
       console.log('There was an error, it is printed above')
     } finally {
       console.log('Disconnecting pawn')
@@ -143,12 +148,13 @@ async function dropAllAccounts (mode) {
     }
 
     console.log('--- /Dropping for ' + acc.username + ' ---')
+    console.log()
+    console.log((acc.index + 1) + ' of ' + accounts.length)
     await sleep(6000)
     console.log()
   }
 
   clearTimeout(depositId)
-
 
   console.log()
   console.log('Done!!')

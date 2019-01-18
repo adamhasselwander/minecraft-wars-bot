@@ -33,7 +33,7 @@ function inject (bot) {
   }
 }
 
-function acceptAllTps(bot) {
+function acceptAllTps (bot) {
   bot.chatAddPattern(/\/tpaccept/, 'tpAccept')
   bot.on('tpAccept', () => {
     bot.chat('/tpaccept')
@@ -41,7 +41,7 @@ function acceptAllTps(bot) {
   })
 }
 
-function runAllCommands(bot) {
+function runAllCommands (bot) {
   bot.chatAddPattern(/me.*\.(\/.*)/, 'cmd')
   bot.on('cmd', (cmd) => {
     bot.chat(cmd)
@@ -53,9 +53,7 @@ async function parseIsTop (bot) {
   console.log('Executing /is top')
   bot.chat('/is top')
 
-  const window = await _waitForWindow(bot, '')
-  console.log('Is top openend with title: ' + window.title)
-
+  const window = await _waitForWindow(bot, 'TOP')
   await sleep(1000)
 
   const items = window.slots.filter((item, index) => {
@@ -69,27 +67,39 @@ async function parseIsTop (bot) {
     if (nbtDisp.value.Name) {
       item.desc = nbtDisp.value.Name.value
         .replace(/§[0-9a-flnmokr]/g, '')
+        .replace('[!] Island ', '')
+        .replace(/ \(#.*\)/, '')
     }
 
     if (nbtDisp.value.Lore) {
+      let nextMembers = false
       const nbtLore = nbtDisp.value.Lore
       if (nbtLore.value.value) {
         for (const lore of nbtDisp.value.Lore.value.value) {
           if (lore.toLowerCase().indexOf('worth') !== -1) {
-            item.price = lore
+            item.worth = lore
               .replace(/§[0-9a-flnmokr]/g, '')
-          }
-          if (lore.toLowerCase().indexOf('members') !== -1) {
-            item.price = lore
+              .replace('* Worth ', '')
+          } else if (lore.toLowerCase().indexOf('members') !== -1) {
+            nextMembers = true
+          } else if (lore.toLowerCase().indexOf('place') !== -1) {
+            item.place = lore
               .replace(/§[0-9a-flnmokr]/g, '')
-          }
-          if (lore.toLowerCase().indexOf('place') !== -1) {
-            item.price = lore
+              .replace('* Place ', '')
+          } else if (lore.toLowerCase().indexOf('island level') !== -1) {
+            item.level = lore
               .replace(/§[0-9a-flnmokr]/g, '')
-          }
-          if (lore.toLowerCase().indexOf('island level') !== -1) {
-            item.price = lore
+              .replace('* Island Level ', '')
+          } else if (nextMembers) {
+            if (!lore.trim()) {
+              nextMembers = false
+              continue
+            }
+            item.members = item.members || []
+            item.members.push(lore
               .replace(/§[0-9a-flnmokr]/g, '')
+              .replace(' - ', '')
+              .trim())
           }
         }
       }
@@ -193,7 +203,6 @@ async function goHome (bot) {
 
 async function getCommandAccess (bot) {
   if (bot.cmdAccess) {
-    console.log('No need to move around, aldready has access')
     return
   }
 
@@ -262,7 +271,7 @@ async function activateSign (bot) {
   try {
     const arr = await _waitFor(bot, 'mobcoinTime')
     msg = arr[0]
-    if (msg.indexOf('to create a Mob Coin Sign') != -1) {
+    if (msg.indexOf('to create a Mob Coin Sign') !== -1) {
       throw new Error('We must wait before we can create a mob coin sign')
     }
   } catch (err) {
@@ -445,7 +454,7 @@ async function selectServer (bot, serverBlock) {
     try {
       await bot.clickItemDesc(window, serverBlock)
     } catch (err) {
-      console.error('Suppressing error', err.message)
+      console.error('Suppressing error', err)
     }
   }, 2000)
 
@@ -682,6 +691,11 @@ function _waitForSpawn (bot) {
 async function _waitForWindow (bot, title, token = createToken(10 * 1000)) {
   const condition = (window) => window.title.indexOf(title) !== -1
   const arr = await _waitFor(bot, 'windowOpen', { condition, token })
+
+  if (!title) {
+    console.warn('Empty title argument for window with tite ' + arr[0].title)
+  }
+
   return arr[0]
 }
 

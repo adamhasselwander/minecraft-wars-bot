@@ -1,6 +1,6 @@
 require('./consolescreens.js')
-let readline = require('readline')
-let rl = readline.createInterface({
+const readline = require('readline')
+const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   terminal: false
@@ -16,65 +16,106 @@ const helper = require('./helper.js')
 const table = require('./table.js')
 
 ;(async function () {
-  let item = await getItemToBuy()
+  const item = await getItemToBuy()
   await buyItemOnAllAccounts(item)
 })()
 
 async function buyItemOnAllAccounts (item) {
-  let accounts = helper.readAccounts()
+  const accounts = helper.readAccounts()
+    .map((acc, index) => {
+      acc.index = index
+      return acc
+    })
+  const failed = []
 
-  for (let acc of accounts) {
+  for (const acc of accounts) {
     const username = acc.username
     const password = acc.password
-
-    const bot = mineflayer.createBot({
-      host: 'pvpwars.net',
-      port: 25565,
-      username: username,
-      password: password,
-      version: '1.8',
-      verbose: true,
-      plugins: {
-        pvpwarsPlugin
-      }
-    })
 
     console.log()
     console.log('--- ' + username + ' ---')
     console.log()
 
     try {
-      await bot.pvpwars.selectServer(server)
-      await bot.pvpwars.getCommandAccess()
-      await sleep(1000)
-      console.log()
-      await buyItem(bot, item)
+      buy(username, password, item)
     } catch (err) {
-      console.log(err)
-    } finally {
-      console.log('Disconnecting player ' + bot.username)
-      await bot.disconnectSafely()
+      console.error(err)
+      if (err.message.indexOf('Invalid') === -1) {
+        failed.push(acc)
+      }
     }
 
     console.log()
     console.log('--- /' + username + ' ---')
+    console.log()
+    console.log((acc.index + 1) + ' of ' + accounts.length)
+    console.log()
+
+    await sleep(10000)
+  }
+
+  console.log('Trying again with the accounts which failed but could login')
+
+  for (const acc of failed) {
+    const username = acc.username
+    const password = acc.password
+
+    console.log()
+    console.log('--- Retry: ' + username + ' ---')
+    console.log()
+
+    try {
+      buy(username, password, item)
+    } catch (err) {
+      console.error(err)
+    }
+
+    console.log()
+    console.log('--- /Retry: ' + username + ' ---')
     console.log()
 
     await sleep(10000)
   }
 }
 
+async function buy (username, password, item) {
+  const bot = mineflayer.createBot({
+    host: 'pvpwars.net',
+    port: 25565,
+    username: username,
+    password: password,
+    version: '1.8',
+    verbose: true,
+    plugins: {
+      pvpwarsPlugin
+    }
+  })
+
+  try {
+    await bot.pvpwars.selectServer(server)
+    await bot.pvpwars.getCommandAccess()
+    await sleep(1000)
+    console.log()
+    await buyItem(bot, item)
+  } catch (err) {
+    console.log('Disconnecting player ' + bot.username)
+    await bot.disconnectSafely()
+    throw err
+  } finally {
+    console.log('Disconnecting player ' + bot.username)
+    await bot.disconnectSafely()
+  }
+}
+
 async function getItemToBuy () {
   console.log('Lets buy stuff for mobcoins!')
   console.log()
-  let accounts = helper.readAccounts()
+  const accounts = helper.readAccounts()
 
-  let master = accounts.filter(a => a.isMaster)
+  const master = accounts.filter(a => a.isMaster)[0]
   if (!master) {
     return 'There is no master defined! Add a semicolon (username:password:) to set the master'
   }
-
-  master = master[0]
 
   const masterBot = mineflayer.createBot({
     host: 'pvpwars.net',
@@ -98,8 +139,7 @@ async function getItemToBuy () {
   for (const item of items) {
     tbl[item.slot] = {
       text: helper.color(item.desc, colors.Fg.Magenta),
-      price: helper.color(item.price, colors.Fg.Yellow),
-      item: item.name
+      price: helper.color(item.price, colors.Fg.Yellow)
     }
   }
 
@@ -111,14 +151,14 @@ async function getItemToBuy () {
 
     async function onLine (line) {
       try {
-        let choice = parseInt(line)
-        let item = items.filter(it => it.slot === choice)[0]
+        const choice = parseInt(line)
+        const item = items.filter(it => it.slot === choice)[0]
 
         console.log('Selected item: ' + item.desc)
         rl.off('line', onLine)
         resolve(item)
       } catch (err) {
-        console.log('Could not parse the choice ' + line +
+        console.error('Could not parse the choice ' + line +
           ' got error ' + err.message)
         console.log('Please enter a new number')
       }
@@ -163,7 +203,7 @@ async function buyItem (bot, item, count = 1) {
             break
           } catch (err) {
             if (i > 3) console.log(err.message)
-            if (i > 5) console.log(err)
+            if (i > 5) console.error(err)
           }
         }
         resolve()

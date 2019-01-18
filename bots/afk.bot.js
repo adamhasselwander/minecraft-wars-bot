@@ -15,7 +15,7 @@ const retryDelay = 5 * 60 * 1000
 
   const accounts = helper.readAfkAccounts()
 
-  for (let acc of accounts) {
+  for (const acc of accounts) {
     const username = acc.username
     const password = acc.password
 
@@ -56,7 +56,12 @@ async function retryLogin (email, password) {
   bot.on('login', () => {
     console.log('Username: ' + bot.username)
   })
-  
+
+  bot.chatAddPattern(/me.*get cmd access/, 'getcmdaccess')
+  bot.once('getcmdaccess', () => {
+    bot.pvpwars.getCommandAccess()
+  })
+
   try {
     await bot.pvpwars.selectServer(server)
     bot.pvpwars.runAllCommands()
@@ -64,7 +69,7 @@ async function retryLogin (email, password) {
     bot.on('end', onEnd)
     console.log('Bot ' + bot.username + ' successfully loggedin')
   } catch (err) {
-    console.log(err)
+    console.error(err)
     console.log('Disconnecting from minecraft')
     await bot.disconnectSafely()
 

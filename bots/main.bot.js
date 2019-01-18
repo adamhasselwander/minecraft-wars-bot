@@ -1,5 +1,4 @@
 require('./consolescreens.js')
-const fs = require('fs')
 const mineflayer = require('mineflayer')
 
 const pvpwarsPlugin = require('./pvpwars.plugin.js')
@@ -14,8 +13,7 @@ const startTime = (new Date()).getTime()
 
 let totalMobCoinsCollected = 0
 
-;
-(async function () {
+;(async function () {
   console.log('Starting the bot')
   console.log()
 
@@ -51,7 +49,7 @@ async function collectMobCoinsAllAccounts () {
       return acc
     })
 
-  for (let acc of accounts) {
+  for (const acc of accounts) {
     const username = acc.username
     const password = acc.password
 
@@ -80,14 +78,9 @@ async function collectMobCoinsAllAccounts () {
       await bot.pvpwars.activateSign()
 
       resetFails(username)
-    } catch (error) {
-      fs.appendFileSync('errors.txt',
-        bot.username + ' (' + username + '):' +
-        new Date().toISOString().replace('T', ' ').substr(0, 19) + ' :' +
-        error.message + '\n\n' + error.stack + '\n\n')
-
-      console.error(error.message, error.stack)
-      let fails = increaseFails(username)
+    } catch (err) {
+      console.error(err)
+      const fails = increaseFails(username)
 
       if (fails > 8) {
         helper.disableAccount(username)
@@ -201,11 +194,11 @@ function printTimes () {
 }
 
 function logTimes (screen, obj) {
-  let maxEmailLength = obj.reduce((acc, a) => Math.max(acc, a.email.length), 0)
-  let maxTimeLength = obj.reduce((acc, a) =>
+  const maxEmailLength = obj.reduce((acc, a) => Math.max(acc, a.email.length), 0)
+  const maxTimeLength = obj.reduce((acc, a) =>
     Math.max(acc, Math.floor(a.timeLeft / (60 * 1000)).toString().length), 0)
 
-  let accounts = obj.map(a => {
+  const accounts = obj.map(a => {
     const t = Math.floor(a.timeLeft / (60 * 1000))
     return {
       email: helper.color(a.email.padEnd(maxEmailLength), colors.Fg.Green),

@@ -10,11 +10,11 @@ function inject (bot) {
 }
 
 async function clickItemDesc (bot, window, desc, clickBtn = 0) {
-  let blocks = window.slots
+  const blocks = window.slots
     .filter((it, index) => {
       if (!it) return false
 
-      let hasNbtName =
+      const hasNbtName =
         it.nbt &&
         it.nbt.value &&
         it.nbt.value.display &&
@@ -30,7 +30,7 @@ async function clickItemDesc (bot, window, desc, clickBtn = 0) {
       return it.displayName.length > 0
     })
 
-  let targetBlock = blocks.filter(s => s.displayName.indexOf(desc) !== -1)[0]
+  const targetBlock = blocks.filter(s => s.displayName.indexOf(desc) !== -1)[0]
 
   if (!targetBlock) {
     throw new Error('Could not find a block with the given description')
@@ -100,13 +100,13 @@ async function disconnectSafely (bot) {
           hasEnded = true
           resolve()
         } catch (err) {
-          console.err('Suppressing error', err.message)
+          console.error('Suppressing error', err)
           resolve()
         }
       })
       bot.quit()
     } catch (err) {
-      console.err('Suppressing error', err.message)
+      console.error('Suppressing error', err)
       resolve()
     }
 
@@ -119,12 +119,12 @@ async function disconnectSafely (bot) {
             bot.removeAllListeners()
             resolve()
           } catch (err) {
-            console.err('Suppressing error', err.message)
+            console.error('Suppressing error', err)
             resolve()
           }
         }, 3000) // incase end is never triggered
       } catch (err) {
-        console.err('Suppressing error', err.message)
+        console.error('Suppressing error', err)
         resolve()
       }
     }, 3000)

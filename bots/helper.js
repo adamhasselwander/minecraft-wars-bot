@@ -88,7 +88,7 @@ function randColor (string) {
 function readUsernames () {
   const contents = readAccountUsernames()
 
-  let usernames = []
+  const usernames = []
 
   Object.entries(contents).forEach(([email, val]) => {
     usernames.push(val.username)
@@ -105,9 +105,9 @@ function readAccounts (printDisabled = false, file = '../accounts.txt') {
   const contents = fs.readFileSync(file, 'utf8')
   const lines = contents.split('\n')
 
-  let accounts = []
+  const accounts = []
 
-  for (let line of lines) {
+  for (const line of lines) {
     if (!line) continue
 
     if (line.split(':').length < 2) {
@@ -122,7 +122,7 @@ function readAccounts (printDisabled = false, file = '../accounts.txt') {
       continue
     }
 
-    let parts = line.split(':')
+    const parts = line.split(':')
     const username = parts[0].trim()
     const password = parts[1].trim()
 
@@ -143,8 +143,8 @@ function disableAccount (account, file = '../accounts.txt') {
     index = contents.indexOf(account, index + 2)
     if (index === -1) break
 
-    let s1 = contents.substring(0, index)
-    let s2 = contents.substring(index)
+    const s1 = contents.substring(0, index)
+    const s2 = contents.substring(index)
 
     contents = s1 + ':' + s2
   } while (index !== -1)
@@ -154,7 +154,7 @@ function disableAccount (account, file = '../accounts.txt') {
 
 function getSignPosition (username, fallbackPosition) {
   const signs = readAccountSignPos()
-  let pos = signs[username]
+  const pos = signs[username]
   if (!pos) return fallbackPosition
 
   return { x: pos.x, y: pos.y, z: pos.z }

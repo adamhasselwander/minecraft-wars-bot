@@ -14,7 +14,7 @@ const password = require('./settings').spectator.password
 const server = require('./settings.js').serverBlock
 
 let watchDogReset = false
-let lastCmds = []
+const lastCmds = []
 let lastCmdTime = 0
 
 setInterval(() => {
@@ -26,8 +26,7 @@ setInterval(() => {
   watchDogReset = true
 }, 2 * 60 * 1000)
 
-;
-(async function () {
+;(async function () {
   const usernames = helper.readUsernames()
   const coins = helper.readAccountCoins()
 
@@ -47,7 +46,7 @@ setInterval(() => {
   })
 
   spectator.once('kicked', (reason) => {
-    let cmds = lastCmds.reduce((acc, cmd) => acc + cmd, '')
+    const cmds = lastCmds.reduce((acc, cmd) => acc + cmd, '')
     process.stdout.write('cmds ' + cmds)
     process.stdout.write('\nkicked ' + reason)
   })
@@ -59,9 +58,14 @@ setInterval(() => {
   spectator.pvpwars.runAllCommands()
 
   await logShop(spectator)
+  await logIsTop(spectator)
 
   setInterval(async () => {
     await logShop(spectator)
+  }, 1000 * 60 * 60 * 2)
+
+  setInterval(async () => {
+    await logIsTop(spectator)
   }, 1000 * 60 * 60 * 2)
 
   await sleep(5000)
@@ -83,29 +87,6 @@ setInterval(() => {
     process.exit()
   })
 
-  spectator.on('windowOpen', (window) => {
-    if (window.title.toLowerCase().indexOf('coins') !== -1) { return }
-
-    let items = window.slots.filter((item, index) => {
-      if (!item) return false
-
-      item.slot = index
-
-      if (item.name === 'stained_glass_pane' || item.slot >= 36) { return false }
-
-      item.desc = item.nbt.value.display.value.Name.value
-        .replace(/§[0-9a-flnmokr]/g, '')
-
-      console.log(item.slot + ' ' + item.name + ' ' + item.desc)
-
-      return true
-    })
-    console.log(window.title, items.map(it => it.desc || it.displayName))
-    process.stdout.write('Window opened')
-    process.stdout.write(window.title, items.map(it => it.desc || it.displayName))
-    process.exit()
-  })
-
   spectator.chatAddPattern(/(.*)s Mob Coins:(.*)/, 'playerMobcoinCount')
   spectator.on('playerMobcoinCount', async (user, userCoins) => {
     const username = user.trim().slice(0, -1)
@@ -115,16 +96,22 @@ setInterval(() => {
       new Date().getTime() - lastCmdTime < 1000) { return }
 
     coins[username] = coins[username] || {}
-    if (coins[username].mobcoins < coin) { coins[username].lastCoinIncrease = (new Date()).getTime() }
+    if (coins[username].mobcoins < coin) {
+      coins[username].lastCoinIncrease = new Date().getTime()
+    }
 
     coins[username].mobcoins = coin
-    coins[username].lastUpdated = (new Date()).getTime()
+    coins[username].lastUpdated = new Date().getTime()
 
     console.log(helper.randColor('XXXX') + '\x1B[1A')
 
     helper.writeAccountCoins(coins)
     watchDogReset = false
     lastCmdTime = new Date().getTime()
+  })
+
+  spectator.on('windowOpen', (window) => {
+    console.warn('A window was opened with title' + window.title)
   })
 
   setInterval(() => {
@@ -164,10 +151,11 @@ async function viewAllMobcoins (bot, delay) {
 }
 
 async function moveRandom (spectator) {
-  const baseTime = 200; const jitter = 300
+  const baseTime = 200
+  const jitter = 300
   const ctrls = [ 'forward', 'back', 'left', 'right', 'sprint', 'jump' ]
 
-  let ctl = ctrls[Math.floor(Math.random() * ctrls.length)]
+  const ctl = ctrls[Math.floor(Math.random() * ctrls.length)]
 
   spectator.setControlState(ctl, true)
   await sleep(baseTime + Math.random() * jitter)
@@ -183,7 +171,7 @@ async function moveRandom (spectator) {
 }
 
 function printTable (usernames, coins) {
-  let obj = {}
+  const obj = {}
   usernames.forEach(u => {
     obj[u] = coins[u]
   })
@@ -192,10 +180,10 @@ function printTable (usernames, coins) {
 
 function printTableCoins (coins, usernames, screenPrefix, time = 120) {
   screenPrefix = screenPrefix || ''
-  let coinKeys = Object.keys(coins)
-  let arr = []
+  const coinKeys = Object.keys(coins)
+  const arr = []
 
-  for (let username of coinKeys) {
+  for (const username of coinKeys) {
     if (!coins[username] || !coins[username].lastUpdated) continue
 
     const now = (new Date()).getTime()
@@ -224,7 +212,7 @@ function printTableCoins (coins, usernames, screenPrefix, time = 120) {
 }
 
 function logTables (screen, usernames, obj) {
-  let arr = obj.filter(() => true)
+  const arr = obj.filter(() => true)
   const tot = arr.length === 0 ? 0
     : arr.map(a => a.mobcoins)
       .reduce((a, b) => a + b)
@@ -233,9 +221,9 @@ function logTables (screen, usernames, obj) {
   arr.push({ username: 'Average', mobcoins: Math.floor(tot / (arr.length - 1)) })
   arr.push({ username: 'Total', mobcoins: tot })
 
-  let maxUnLen = arr.reduce((acc, a) => Math.max(acc, a.username.length), 0)
+  const maxUnLen = arr.reduce((acc, a) => Math.max(acc, a.username.length), 0)
 
-  arr = arr.map(a => ({
+  const tbl = arr.map(a => ({
     username: usernames.indexOf(a.username) !== -1
       ? helper.color((a.username || '').padEnd(maxUnLen), colors.Fg.Green)
       : helper.color((a.username || '').padEnd(maxUnLen), colors.Fg.Blue),
@@ -246,20 +234,38 @@ function logTables (screen, usernames, obj) {
     'last inc': a.lastInc > 100000 ? '---' : a.lastInc
   }))
 
-  console.logScreen(screen, table(arr, ''))
+  console.logScreen(screen, table(tbl, ''))
   console.log(helper.randColor('XXXX') + '\x1B[1A')
 }
 
 async function logShop (spectator) {
-  const items = await spectator.pvpwars.parseMobcoinShop(createToken(0))
+  const items = await spectator.pvpwars.parseMobcoinShop()
   const tbl = {}
   for (const item of items) {
     tbl[item.slot] = {
       text: helper.color(item.desc, colors.Fg.Magenta),
-      price: helper.color(item.price, colors.Fg.Yellow),
-      item: item.name
+      price: helper.color(item.price, colors.Fg.Yellow)
     }
   }
 
   console.logScreen('shop', table(tbl, '#'))
+}
+async function logIsTop (spectator) {
+  const topPlayers = await spectator.pvpwars.parseIsTop()
+  const tbl = {}
+  const maxMemberLength = topPlayers.reduce((acc, a) =>
+    Math.max(acc, a.members.join(', ').length), 0)
+
+  for (const item of topPlayers) {
+    tbl[item.place.replace('#', '')] = {
+      name: helper.color(item.desc, colors.Fg.Magenta),
+      worth: helper.color(item.worth, colors.Fg.Yellow),
+      level: helper.color(item.level, colors.Fg.Yellow),
+      members: helper.color(
+        item.members.join(', ').padEnd(maxMemberLength),
+        colors.Fg.Yellow)
+    }
+  }
+
+  console.logScreen('istop', table(tbl, '#'))
 }

@@ -1,3 +1,4 @@
+const fs = require('fs')
 const helper = require('./helper.js')
 const readline = require('readline')
 
@@ -32,20 +33,44 @@ console.warn = (...msg) => {
   console.logScreen('warn', ...msg)
 }
 console.error = (...msg) => {
-  console.logScreen('error', ...msg)
+  for (let m of msg) {
+    if (!(m instanceof Error)) {
+      console.logScreen('error', m)
+      m = new Error(m)
+    } else {
+      console.logScreen('error', helper.color(m.message, colors.Fg.Red))
+    }
+
+    const err = {
+      readableDate: new Date().toISOString().replace('T', ' ').substr(0, 19),
+      message: m.message,
+      stack: m.stack,
+      date: new Date().getTime()
+    }
+
+    fs.appendFileSync('errors.txt', JSON.stringify(err, null, 2) + ',')
+  }
 }
 console.logCurrent = (...msg) => {
   console.logScreen(currentScreenKey, ...msg)
 }
-console.logScreen = (key, ...msg) => {
+console.logScreen = (options, ...msg) => {
+  let logAll = true
+  let key = options
+  if (typeof options === 'object') {
+    key = options.key
+    logAll = options.logAll
+  }
+
   if (!console.screens.buffers[key]) { console.screens.buffers[key] = [] }
 
   shortenBuff(key)
-  shortenBuff('all')
-
   console.screens.buffers[key].push(msg)
 
-  if (key !== 'all') { console.screens.buffers['all'].push(msg) }
+  if (key !== 'all' && logAll) {
+    shortenBuff('all')
+    console.screens.buffers['all'].push(msg)
+  }
 }
 
 const countLines = (buff) =>
