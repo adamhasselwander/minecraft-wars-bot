@@ -1,5 +1,14 @@
-const console = require('./consolescreens.js')
+const args = require('minimist')(
+  process.argv.slice(2), {
+    default: {
+      accounts: '../accounts.txt'
+    },
+    alias: {
+      accounts: ['a', 'acc']
+    }
+  })
 
+require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 
 const table = require('./table.js')
@@ -25,6 +34,11 @@ setInterval(() => {
 
   watchDogReset = true
 }, 2 * 60 * 1000)
+
+if (args.h) {
+  console.log('Usage: node spectator.bot.js [--accounts file]')
+  process.exit(1)
+}
 
 ;(async function () {
   const usernames = helper.readUsernames()

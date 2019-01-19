@@ -36,7 +36,7 @@ console.error = (...msg) => {
   for (let m of msg) {
     if (!(m instanceof Error)) {
       console.logScreen('error', m)
-      m = new Error(m)
+      m = new Error(m) // this is ugly
     } else {
       console.logScreen('error', helper.color(m.message, colors.Fg.Red))
     }
@@ -71,6 +71,8 @@ console.logScreen = (options, ...msg) => {
     shortenBuff('all')
     console.screens.buffers['all'].push(msg)
   }
+
+  draw()
 }
 
 const countLines = (buff) =>
@@ -105,15 +107,16 @@ console.changeScreen = (key) => {
   console.clear()
 
   console.screens.emit('changed', key)
+  draw()
 }
 
-setInterval(() => {
+function draw () {
   const currentScreen = console.screens.buffers[currentScreenKey]
   for (; currentScreenIndex < currentScreen.length; currentScreenIndex++) {
     const row = currentScreen[currentScreenIndex] ? currentScreen[currentScreenIndex] : []
     oldConsoleLog(...row)
   }
-}, 50)
+}
 
 rl.on('line', onLine)
 
@@ -122,11 +125,18 @@ async function onLine (line) {
 
   if (line === 'h' || line === 'help') {
     oldConsoleLog('Available screens:')
+    let odd = true
     const keysBold = keys.map(key => {
-      if (key === currentScreenKey) { return helper.color(key, colors.Fg.Red) }
-      return key
+      if (key === currentScreenKey) {
+        return helper.color(key, colors.Fg.Red)
+      }
+      odd = !odd
+      if (odd) return helper.color(key, colors.Fg.Blue + colors.Dim)
+      if (!odd) return helper.color(key, colors.Fg.Blue + colors.Bright)
     })
-    oldConsoleLog(keysBold.reduce((acc, n) => acc + ' ' + n), '')
+
+    oldConsoleLog(keysBold
+      .reduce((acc, n) => acc + ' ' + n.split('\n')[0]), '')
   } else if (line) {
     console.changeScreen(line)
   }

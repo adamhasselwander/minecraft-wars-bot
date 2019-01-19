@@ -1,3 +1,13 @@
+const args = require('minimist')(
+  process.argv.slice(2), {
+    default: {
+      accounts: '../accounts.txt'
+    },
+    alias: {
+      accounts: ['a', 'acc']
+    }
+  })
+
 require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 
@@ -13,11 +23,16 @@ const startTime = (new Date()).getTime()
 
 let totalMobCoinsCollected = 0
 
+if (args.h) {
+  console.log('Usage: node main.bot.js [--accounts file]')
+  process.exit(1)
+}
+
 ;(async function () {
   console.log('Starting the bot')
   console.log()
 
-  helper.readAccounts(true)
+  helper.printDisabledAccounts(args.accounts)
   console.log()
   printTimes()
 
@@ -37,7 +52,7 @@ let totalMobCoinsCollected = 0
 })()
 
 async function collectMobCoinsAllAccounts () {
-  const accounts = helper.readAccounts()
+  const accounts = helper.readAccounts(args.accounts)
     .map(acc => {
       acc.timeLeft = getTimeToRun(acc.username)
       return acc
@@ -173,7 +188,7 @@ function printTimes () {
   const usernames = helper.readAccountUsernames()
   const times = helper.readAccountTimes()
 
-  let accounts = helper.readAccounts()
+  let accounts = helper.readAccounts(args.accounts)
     .map(acc => {
       const user = usernames[acc.username] ? usernames[acc.username].username : ''
       const time = times[acc.username]

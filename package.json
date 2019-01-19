@@ -18,6 +18,7 @@
   "homepage": "https://github.com/adamhasselwander/minecraft-wars-bot#readme",
   "dependencies": {
     "mineflayer": "^2.7.3",
-    "mineflayer-blockfinder": "0.0.7"
+    "mineflayer-blockfinder": "0.0.7",
+    "minimist": "^1.2.0"
   }
 }

@@ -29,7 +29,7 @@ module.exports.updateSignPosition = updateSignPosition
 module.exports.readUsernames = readUsernames
 
 module.exports.readAccounts = readAccounts
-module.exports.readAfkAccounts = readAfkAccounts
+module.exports.printDisabledAccounts = printDisabledAccounts
 
 module.exports.disableAccount = disableAccount
 
@@ -76,7 +76,7 @@ function createToken (expires = 10 * 1000) {
 
 function color (string, color) {
   if (!string) return ''
-  return color + string + colors.Fg.White
+  return color + string + colors.Fg.White + colors.Reset
 }
 
 function randColor (string) {
@@ -97,28 +97,30 @@ function readUsernames () {
   return usernames
 }
 
-function readAfkAccounts () {
-  return readAccounts(false, '../afk.txt')
+function printDisabledAccounts (file) {
+  const contents = fs.readFileSync(file, 'utf8')
+  const lines = contents.split('\n')
+
+  for (const line of lines) {
+    if (line && !line.split(':')[0]) {
+      console.log('Account disabled ' + line.split(':')[1])
+    }
+  }
 }
 
-function readAccounts (printDisabled = false, file = '../accounts.txt') {
+function readAccounts (file) {
   const contents = fs.readFileSync(file, 'utf8')
   const lines = contents.split('\n')
 
   const accounts = []
 
   for (const line of lines) {
-    if (!line) continue
+    if (!line || !line.split(':')[0]) continue
 
     if (line.split(':').length < 2) {
       console.log('Could not read the row (' + line.trim() +
         ') in accounts.txt, make sure it cotains username:password')
 
-      continue
-    }
-
-    if (!line.split(':')[0]) {
-      if (printDisabled) console.log('Account disabled ' + line.split(':')[1])
       continue
     }
 

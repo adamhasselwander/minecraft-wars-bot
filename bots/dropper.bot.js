@@ -1,3 +1,13 @@
+const args = require('minimist')(
+  process.argv.slice(2), {
+    default: {
+      accounts: '../accounts.txt'
+    },
+    alias: {
+      accounts: ['a', 'acc']
+    }
+  })
+
 require('./consolescreens.js')
 const mineflayer = require('mineflayer')
 
@@ -6,13 +16,13 @@ const pvpwarsPlugin = require('./pvpwars.plugin.js')
 const helper = require('./helper.js')
 const server = require('./settings.js').serverBlock
 
-const mode = process.argv[2]
-if (process.argv.length !== 3 || !(mode === 'inv' || mode === 'coins')) {
-  console.log('Usage : node dropper.bot.js <inv|coins>')
+const mode = args._[0]
+if (!(mode === 'inv' || mode === 'coins') || args.h) {
+  console.log('Usage: node dropper.bot.js <inv|coins> [--accounts file]')
   process.exit(1)
 }
 
-(async function () {
+;(async function () {
   await dropAllAccounts(mode)
   process.exit(1)
 })()
@@ -21,7 +31,7 @@ async function dropAllAccounts (mode) {
   console.log('We are going to drop stuff!')
   console.log()
 
-  const master = helper.readAccounts().filter(a => a.isMaster)[0]
+  const master = helper.readAccounts(args.accounts).filter(a => a.isMaster)[0]
   if (!master) {
     throw new Error('There is no master defined!' +
       ' Add a semicolon (username:password:) to set the master')
@@ -95,7 +105,7 @@ async function dropAllAccounts (mode) {
 
     depositId = setTimeout(depositMobCoins, 7 * 1000 + Math.random() * 1000 * 5)
   }
-  const accounts = helper.readAccounts()
+  const accounts = helper.readAccounts(args.accounts)
     .map((acc, index) => {
       acc.index = index
       return acc

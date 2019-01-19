@@ -1,3 +1,13 @@
+const args = require('minimist')(
+  process.argv.slice(2), {
+    default: {
+      accounts: '../accounts.txt'
+    },
+    alias: {
+      accounts: ['a', 'acc']
+    }
+  })
+
 require('./consolescreens.js')
 const readline = require('readline')
 const rl = readline.createInterface({
@@ -15,13 +25,18 @@ const server = require('./settings.js').serverBlock
 const helper = require('./helper.js')
 const table = require('./table.js')
 
+if (args.h) {
+  console.log('Usage: node buyforallcoins.bot.js [--accounts file]')
+  process.exit(1)
+}
+
 ;(async function () {
   const item = await getItemToBuy()
   await buyItemOnAllAccounts(item)
 })()
 
 async function buyItemOnAllAccounts (item) {
-  const accounts = helper.readAccounts()
+  const accounts = helper.readAccounts(args.accounts)
     .map((acc, index) => {
       acc.index = index
       return acc
@@ -110,7 +125,7 @@ async function buy (username, password, item) {
 async function getItemToBuy () {
   console.log('Lets buy stuff for mobcoins!')
   console.log()
-  const accounts = helper.readAccounts()
+  const accounts = helper.readAccounts(args.accounts)
 
   const master = accounts.filter(a => a.isMaster)[0]
   if (!master) {
