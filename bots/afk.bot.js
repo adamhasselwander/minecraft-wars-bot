@@ -136,6 +136,23 @@ async function retryLogin (email, password) {
     }, (secs + 2) * 1000)
   })
 
+  bot.chatAddPattern(/me.*drop inv (.*)/, 'dropInv')
+  bot.on('dropInv', (user) => {
+    if (user && user.trim()) {
+      user = user.trim()
+      const p = bot.players[user]
+
+      if (!p) {
+        console.log('Could not find user to look at ' + user)
+      } else {
+        bot.lookAt(
+          p.entity.position.offset(0, masterBot.entity.height / 2, 0))
+      }
+    }
+
+    bot.pvpwars.tossInventory()
+  })
+
   try {
     await bot.pvpwars.selectServer(server)
     bot.pvpwars.runAllCommands()
