@@ -18,7 +18,7 @@ const server = require('./settings.js').serverBlock
 const helper = require('./helper.js')
 
 const bots = [] // I fear the bots will be garbage collected if i don't do this.
-const retryDelay = 5 * 60 * 1000
+const retryDelay = 30 * 1000
 
 if (args.h) {
   console.log('Usage: node afk.bot.js [--accounts file] [--activatepet]')
@@ -116,6 +116,7 @@ async function retryLogin (email, password) {
   })
 
   bot.chatAddPattern(/This(.*)Pet is still on cooldown for (.*) seconds/, 'petcooldown')
+  bot.chatAddPattern(/You can only use(*.)every seconds, (.*) seconds/, 'petcooldown')
 
   bot.on('petcooldown', (type, cd) => {
     let secs
